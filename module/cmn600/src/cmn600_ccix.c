@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -9,9 +9,9 @@
 #include <fwk_macros.h>
 #include <fwk_math.h>
 #include <mod_log.h>
+#include <cmn600.h>
 #include <internal/cmn600_ctx.h>
 #include <internal/cmn600_ccix.h>
-
 
 #define MOD_NAME "[CMN600] "
 
@@ -79,6 +79,47 @@ static bool cxg_link_wait_condition(void *data)
     }
 }
 
+static int enable_smp_mode(struct cmn600_ctx *ctx)
+{
+    if (get_cmn600_revision(ctx->root) == CMN600_PERIPH_ID_2_REV_R2_P0) {
+        /*
+         * CMN-600 revision r2p0 uses read-only bits from the CXG_RA and CXG_HA
+         * registers to determine whether the SMP Mode is enabled in hardware.
+         */
+        if (((ctx->cxg_ra_reg->CXG_RA_UNIT_INFO &
+              CXG_RA_UNIT_INFO_SMP_MODE_RO_MASK) !=
+             CXG_RA_UNIT_INFO_SMP_MODE_RO_MASK) ||
+            ((ctx->cxg_ha_reg->CXG_HA_UNIT_INFO &
+              CXG_HA_UNIT_INFO_SMP_MODE_RO_MASK) !=
+             CXG_HA_UNIT_INFO_SMP_MODE_RO_MASK)) {
+                ctx->log_api->log(MOD_LOG_GROUP_INFO, MOD_NAME
+                                  "SMP Mode not supported\n");
+                return FWK_E_SUPPORT;
+            }
+
+        ctx->log_api->log(MOD_LOG_GROUP_INFO, MOD_NAME "SMP Mode supported\n");
+        return FWK_SUCCESS;
+    } else if (get_cmn600_revision(ctx->root) >= CMN600_PERIPH_ID_2_REV_R3_P0) {
+        /*
+         * CMN-600 revision r3p0 and above allows the software to configure the
+         * SMP mode
+         */
+        ctx->cxg_ra_reg->CXG_RA_AUX_CTRL |=
+            (1 << CXG_RA_AUX_CTRL_SMP_MODE_RW_SHIFT_VAL);
+        ctx->cxg_ha_reg->CXG_HA_AUX_CTRL |=
+            (1 << CXG_HA_AUX_CTRL_SMP_MODE_RW_SHIFT_VAL);
+        ctx->cxla_reg->CXLA_AUX_CTRL |=
+            ((uint64_t)0x1 << CXLA_AUX_CTRL_SMP_MODE_SHIFT_VAL);
+        ctx->log_api->log(MOD_LOG_GROUP_INFO, MOD_NAME "SMP MODE enabled\n");
+        return FWK_SUCCESS;
+    }
+
+    /*
+     * CMN-600 revision till r1p3 does not provide registers to read or
+     * configure SMP Mode.
+     */
+    return FWK_SUCCESS;
+}
 
 static void program_cxg_ra_rnf_ldid_to_raid_reg(struct cmn600_ctx *ctx,
     uint8_t ldid_value, uint8_t raid)
@@ -241,6 +282,14 @@ static void program_cxg_ra_sam_addr_region(struct cmn600_ctx *ctx,
         /* Size must be a multiple of SAM_GRANULARITY */
         fwk_assert((config->remote_ha_mmap[i].size % (64 * 1024)) == 0);
 
+        /* Size also must be a power of two */
+        fwk_assert((config->remote_ha_mmap[i].size &
+                    (config->remote_ha_mmap[i].size - 1)) == 0);
+
+        /* Region base should be naturally aligned to the region size */
+        fwk_assert(config->remote_ha_mmap[i].base %
+                   config->remote_ha_mmap[i].size == 0);
+
         blocks = config->remote_ha_mmap[i].size / (64 * 1024);
         sz = fwk_math_log2(blocks);
         ctx->cxg_ra_reg->CXG_RA_SAM_ADDR_REGION_REG[i] =
@@ -277,7 +326,7 @@ static int enable_and_start_ccix_link_up_sequence(struct cmn600_ctx *ctx,
         ~CXLA_CCIX_PROP_MAX_PACK_SIZE_MASK;
 
     ctx->cxla_reg->CXLA_CCIX_PROP_CONFIGURED |=
-        (CXLA_CCIX_PROP_MAX_PACK_SIZE_512 <<
+        (config->ccix_max_packet_size <<
         CXLA_CCIX_PROP_MAX_PACK_SIZE_SHIFT_VAL);
 
     ctx->cxla_reg->CXLA_LINKID_TO_PCIE_BUS_NUM =
@@ -402,14 +451,14 @@ int ccix_setup(struct cmn600_ctx *ctx, void *remote_config)
     uint8_t agent_id;
     uint8_t remote_agent_id;
     uint8_t offset_id;
-    uint8_t rnf_cnt;
+    unsigned int block;
     uint8_t local_ra_cnt;
+    uint8_t unique_remote_rnf_ldid_value;
     int status;
 
-    struct mod_cmn600_ccix_remote_node_config * ccix_remote_config =
+    struct mod_cmn600_ccix_remote_node_config *ccix_remote_config =
         (struct mod_cmn600_ccix_remote_node_config *)remote_config;
 
-    cmn600_setup_sam((struct cmn600_rnsam_reg *)((uint32_t)ctx->cxg_ra_reg));
     ctx->log_api->log(MOD_LOG_GROUP_DEBUG,
         MOD_NAME "Programming CCIX gateway...\n");
 
@@ -420,21 +469,21 @@ int ccix_setup(struct cmn600_ctx *ctx, void *remote_config)
     fwk_assert((ctx->external_rnsam_count > 1) &&
                 (ctx->external_rnsam_count <= (0xFF + 1)));
 
-    /* Number of local RN-F */
-    rnf_cnt = ctx->external_rnsam_count - 1;
-
     /* Number of local RAs */
-    local_ra_cnt = ctx->internal_rnsam_count + ctx->external_rnsam_count - 1;
+    local_ra_cnt = ctx->internal_rnsam_count + ctx->external_rnsam_count;
+
+    if (ccix_remote_config->smp_mode == true) {
+        status = enable_smp_mode(ctx);
+        if (status != FWK_SUCCESS)
+            return status;
+    }
 
     /* Set initial RAID value to 0. */
     ctx->raid_value = 0;
 
-    if (ctx->chip_id == 0)
-        offset_id = 0;
-    else
-        offset_id = local_ra_cnt;
+    offset_id = ctx->chip_id * local_ra_cnt;
 
-    for (rnf_ldid = 0; rnf_ldid < rnf_cnt; rnf_ldid++) {
+    for (rnf_ldid = 0; rnf_ldid < ctx->rnf_count; rnf_ldid++) {
         agent_id = ctx->raid_value + offset_id;
 
         /* Program RAID values in CXRA LDID to RAID LUT */
@@ -455,36 +504,41 @@ int ccix_setup(struct cmn600_ctx *ctx, void *remote_config)
     }
 
     /*
-     * Unique_ha_ldid_value is used to keep track of the
+     * unique_remote_rnf_ldid_value is used to keep track of the
      * ldid of the remote RNF agents
      */
-    ctx->unique_ha_ldid_value = rnf_cnt;
+    unique_remote_rnf_ldid_value = ctx->rnf_count;
 
-    if (ctx->chip_id == 0)
-        offset_id = local_ra_cnt;
-    else
-        offset_id = 0;
+    for (i = 0; i < ccix_remote_config->remote_rnf_count; i++) {
+        block = i / ctx->rnf_count;
 
-    for (i = 0; i < ccix_remote_config->remote_ra_count; i++) {
-        remote_agent_id = i + offset_id;
+        /*
+         * The remote_agent_id should not include the current chip's agent ids.
+         * If `block` is less than the current chip_id, then include the agent
+         * ids of chip 0 till (not including) current chip. If the block is
+         * equal or greater than the current chip, then include the agent id
+         * from next chip till the max chip.
+         */
+        if (block < ctx->chip_id)
+            remote_agent_id = i + (ctx->rnf_count * block);
+        else
+            remote_agent_id = i + (ctx->rnf_count * block) + local_ra_cnt;
 
         /* Program the CXHA raid to ldid LUT */
         program_cxg_ha_raid_to_ldid_lut(ctx, remote_agent_id,
-            ctx->unique_ha_ldid_value);
+            unique_remote_rnf_ldid_value);
         /*
          * Program HN-F ldid to CHI node id for
          * remote RN-F agents
          */
-        program_hnf_ldid_to_chi_node_id_reg(ctx, ctx->unique_ha_ldid_value,
-            ctx->cxg_ha_node_id, REMOTE_CCIX_NODE);
+        program_hnf_ldid_to_chi_node_id_reg(ctx,
+            unique_remote_rnf_ldid_value, ctx->cxg_ha_node_id,
+            REMOTE_CCIX_NODE);
 
-        ctx->unique_ha_ldid_value++;
+        unique_remote_rnf_ldid_value++;
     }
 
-    if (ctx->chip_id == 0)
-        offset_id = 0;
-    else
-        offset_id = local_ra_cnt;
+    offset_id = ctx->chip_id * local_ra_cnt;
 
     for (i = 0; i < ctx->rnd_count; i++) {
         rnd_ldid = ctx->rnd_ldid[i];
@@ -600,4 +654,35 @@ int ccix_enter_dvm_domain(struct cmn600_ctx *ctx, uint8_t link_id)
 
     ctx->log_api->log(MOD_LOG_GROUP_DEBUG, "Done\n");
     return FWK_SUCCESS;
+}
+
+void ccix_capabilities_get(struct cmn600_ctx *ctx)
+{
+    /* Populate maximum credit send capability */
+    ctx->ccix_host_info.ccix_request_credits =
+        (ctx->cxg_ra_reg->CXG_RA_UNIT_INFO & CXG_RA_REQUEST_TRACKER_DEPTH_MASK)
+         >> CXG_RA_REQUEST_TRACKER_DEPTH_VAL;
+
+    ctx->ccix_host_info.ccix_snoop_credits =
+        (ctx->cxg_ha_reg->CXG_HA_UNIT_INFO & CXG_HA_SNOOP_TRACKER_DEPTH_MASK) >>
+         CXG_HA_SNOOP_TRACKER_DEPTH_VAL;
+
+    ctx->ccix_host_info.ccix_data_credits =
+        (ctx->cxg_ha_reg->CXG_HA_UNIT_INFO & CXG_HA_WDB_DEPTH_MASK) >>
+          CXG_HA_WDB_DEPTH_VAL;
+
+    /* Populate max packet size capability */
+    ctx->ccix_host_info.ccix_max_packet_size =
+        (ctx->cxla_reg->CXLA_CCIX_PROP_CAPABILITIES &
+         CXLA_CCIX_PROP_MAX_PACK_SIZE_MASK) >>
+         CXLA_CCIX_PROP_MAX_PACK_SIZE_SHIFT_VAL;
+
+    /* Optimized TLP is always supported by CMN-600 */
+    ctx->ccix_host_info.ccix_opt_tlp = true;
+
+    /* Populate message packing capability */
+    ctx->ccix_host_info.ccix_msg_pack_enable =
+        !((ctx->cxla_reg->CXLA_CCIX_PROP_CAPABILITIES &
+          CXLA_CCIX_PROP_MSG_PACK_SHIFT_MASK) >>
+          CXLA_CCIX_PROP_MSG_PACK_SHIFT_VAL);
 }

@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -12,16 +12,19 @@
 #include <mod_clock.h>
 #include <mod_log.h>
 #include <mod_pl011.h>
+#include <config_power_domain.h>
 #include <juno_mmap.h>
 
 static const struct fwk_element pl011_element_desc_table[] = {
     [0] = {
-        .name = "board-uart1",
+        .name = "",
         .data = &(struct mod_pl011_device_config) {
             .reg_base = FPGA_UART1_BASE,
             .baud_rate_bps = 115200,
             .clock_rate_hz = 24 * FWK_MHZ,
             .clock_id = FWK_ID_NONE_INIT,
+            .pd_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_POWER_DOMAIN,
+                POWER_DOMAIN_IDX_SYSTOP),
         },
     },
     [1] = {0},

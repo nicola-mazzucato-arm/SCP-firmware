@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -209,6 +209,15 @@ static int scmi_ccix_config_protocol_get_handler(fwk_id_t service_id,
                        ADDRESS_LSB_MASK);
     }
 
+    return_values.link_properties =
+        ((ccix_host_config.ccix_data_credits << DATA_CREDITS_BIT_POS) |
+         (ccix_host_config.ccix_snoop_credits << SNOOP_CREDITS_BIT_POS) |
+         (ccix_host_config.ccix_request_credits << REQUEST_CREDITS_BIT_POS) |
+         (ccix_host_config.ccix_max_packet_size <<
+          HOST_MAX_PACKET_SIZE_BIT_POS) |
+         (ccix_host_config.ccix_opt_tlp << HOST_OPT_TLP_BIT_POS) |
+         (ccix_host_config.ccix_msg_pack_enable << HOST_MSG_PACK_BIT_POS));
+
 exit:
     scmi_ccix_config_ctx.scmi_api->respond(service_id, &return_values,
         (return_values.status == SCMI_SUCCESS) ?
@@ -262,7 +271,7 @@ static int scmi_ccix_config_protocol_set_handler(fwk_id_t service_id,
         goto exit;
     }
 
-    ccix_ep_config.remote_ra_count =
+    ccix_ep_config.remote_rnf_count =
         (uint8_t)(params->agent_count & RA_COUNT_MASK);
     ccix_ep_config.remote_ha_count =
         (uint8_t)((params->agent_count & HA_COUNT_MASK) >> HA_COUNT_BIT_POS);
@@ -281,6 +290,9 @@ static int scmi_ccix_config_protocol_set_handler(fwk_id_t service_id,
     ccix_ep_config.remote_ha_mmap_count = (uint8_t)(params->remote_mmap_count);
     ccix_ep_config.ccix_opt_tlp = (bool)((params->config_property &
                                           OPT_TLP_MASK) >> OPT_TLP_BIT_POS);
+    ccix_ep_config.ccix_max_packet_size = (uint8_t)((params->config_property &
+                                                     MAX_PACKET_SIZE_MASK) >>
+                                                     MAX_PACKET_SIZE_BIT_POS);
 
     for (i = 0; i < ccix_ep_config.remote_ha_mmap_count; i++) {
         ccix_ep_config.remote_ha_mmap[i].ha_id =

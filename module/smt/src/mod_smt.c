@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -334,10 +334,6 @@ static int smt_init(fwk_id_t module_id, unsigned int element_count,
 {
     smt_ctx.channel_ctx_table = fwk_mm_calloc(element_count,
         sizeof(smt_ctx.channel_ctx_table[0]));
-    if (smt_ctx.channel_ctx_table == NULL) {
-        assert(false);
-        return FWK_E_NOMEM;
-    }
     smt_ctx.channel_count = element_count;
 
     return FWK_SUCCESS;
@@ -364,17 +360,8 @@ static int smt_channel_init(fwk_id_t channel_id, unsigned int unused,
     channel_ctx->in = fwk_mm_alloc(1, channel_ctx->config->mailbox_size);
     channel_ctx->out = fwk_mm_alloc(1, channel_ctx->config->mailbox_size);
 
-    if ((channel_ctx->in == NULL) || (channel_ctx->out == NULL))
-        return FWK_E_NOMEM;
-
     channel_ctx->max_payload_size = channel_ctx->config->mailbox_size -
         sizeof(struct mod_smt_memory);
-
-    /* Check memory allocations */
-    if ((channel_ctx->in == NULL) || (channel_ctx->out == NULL)) {
-        assert(false);
-        return FWK_E_NOMEM;
-    }
 
     return FWK_SUCCESS;
 }
@@ -523,6 +510,7 @@ static int smt_process_notification(
         /* Notify that this mailbox is initialized */
         struct fwk_event smt_channels_initialized_notification = {
             .id = mod_smt_notification_id_initialized,
+            .source_id = FWK_ID_NONE
         };
 
         channel_ctx->smt_mailbox_ready = true;

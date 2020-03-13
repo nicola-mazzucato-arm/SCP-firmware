@@ -1,7 +1,7 @@
 
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -37,6 +37,10 @@ int ccix_enter_system_coherency(struct cmn600_ctx *ctx, uint8_t link_id);
  */
 int ccix_enter_dvm_domain(struct cmn600_ctx *ctx, uint8_t link_id);
 
+/*
+ * CMN600 CCIX get Capabilities Function
+ */
+void ccix_capabilities_get(struct cmn600_ctx *ctx);
 
 /*
  * CCIX Gateway (CXG) protocol link control & status registers
@@ -59,7 +63,7 @@ struct cmn600_cxg_ha_reg {
            uint8_t      RESERVED2[0x980-0x908];
     FWK_RW uint64_t     CXG_HA_SEC_REG_GRP_OVERRIDE;
            uint8_t      RESERVED3[0xA08-0x988];
-    FWK_RW uint64_t     CXG_AUX_CTRL;
+    FWK_RW uint64_t     CXG_HA_AUX_CTRL;
            uint8_t      RESERVED4[0xC00-0xA10];
     FWK_RW uint64_t     CXG_HA_RNF_RAID_TO_LDID_REG[8];
     FWK_RW uint64_t     CXG_HA_AGENTID_TO_LINKID_REG[8];
@@ -171,6 +175,10 @@ struct cxg_wait_condition_data {
 #define CXG_RA_RND_RAID_VALID_REG_OFFSET          0xF38
 #define CXG_RA_AGENTID_TO_LINKID_OFFSET           0xE60
 #define CXG_RA_AGENTID_TO_LINKID_VAL_OFFSET       0xF20
+#define CXG_RA_REQUEST_TRACKER_DEPTH_MASK         UINT64_C(0x0000000001FF0000)
+#define CXG_RA_REQUEST_TRACKER_DEPTH_VAL          16
+#define CXG_RA_UNIT_INFO_SMP_MODE_RO_MASK         (UINT64_C(1) << 61)
+#define CXG_RA_AUX_CTRL_SMP_MODE_RW_SHIFT_VAL     (16)
 
 /* CCIX Gateway (CXG) Home Agent (HA) defines */
 
@@ -180,11 +188,19 @@ struct cxg_wait_condition_data {
 #define CXG_HA_RAID_TO_LDID_VALID_OFFSET          (0xD08)
 #define CXG_HA_RAID_TO_LDID_RNF_MASK              (0x80)
 #define CXG_HA_LDID_TO_RAID_OFFSET                0xC00
+#define CXG_HA_SNOOP_TRACKER_DEPTH_MASK           UINT64_C(0x00001FF000000000)
+#define CXG_HA_SNOOP_TRACKER_DEPTH_VAL            36
+#define CXG_HA_WDB_DEPTH_MASK                     UINT64_C(0x0000000007FC0000)
+#define CXG_HA_WDB_DEPTH_VAL                      18
+#define CXG_HA_UNIT_INFO_SMP_MODE_RO_MASK         (UINT64_C(1) << 63)
+#define CXG_HA_AUX_CTRL_SMP_MODE_RW_SHIFT_VAL     (16)
 
 /* CCIX Gateway (CXG) Link Agent (LA) defines */
 
 #define CXLA_AGENTID_TO_LINKID_OFFSET             0xC30
 #define CXLA_AGENTID_TO_LINKID_VAL_OFFSET         0xC70
+
+#define CXLA_CCIX_PROP_MSG_PACK_SHIFT_MASK        UINT64_C(0x0000000000000400)
 #define CXLA_CCIX_PROP_MSG_PACK_SHIFT_VAL         10
 
 #define CXLA_CCIX_PROP_MAX_PACK_SIZE_MASK         UINT64_C(0x0000000000000380)
@@ -198,6 +214,8 @@ struct cxg_wait_condition_data {
 
 #define CXLA_PCIE_HDR_TRAFFIC_CLASS_SHIFT_VAL     12
 #define CXLA_PCIE_HDR_VENDOR_ID_SHIFT_VAL         32
+
+#define CXLA_AUX_CTRL_SMP_MODE_SHIFT_VAL          (47)
 
 /* CCIX Gateway (CXG) link control & status defines */
 
@@ -226,6 +244,6 @@ struct cxg_wait_condition_data {
 #define SAM_ADDR_REG_VALID_MASK                   UINT64_C(0x8000000000000000)
 #define PCIE_OPT_HDR_MASK                         (0x1ULL << 6)
 #define CTL_NUM_SNPCRDS_MASK                      (0xF << 4)
-#define CCIX_VENDER_ID                            (0x2692)
+#define CCIX_VENDER_ID                            (0x1E2C)
 
 #endif /* INTERNAL_CMN600_CCIX_H */

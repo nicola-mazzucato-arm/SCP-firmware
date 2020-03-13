@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # Arm SCP/MCP Software
-# Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+# Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -296,6 +296,74 @@ def main():
         'make clean all'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product synquacer debug build (ARM)', result))
+
+    banner('Test building sgm776 product')
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=sgm776 ' \
+        'MODE=release ' \
+        'make clean all'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product sgm776 release build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=sgm776 ' \
+        'MODE=release ' \
+        'make clean all'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product sgm776 release build (ARM)', result))
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=sgm776 ' \
+        'MODE=debug ' \
+        'make clean all'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product sgm776 debug build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=sgm776 ' \
+        'MODE=debug ' \
+        'make clean all'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product sgm776 debug build (ARM)', result))
+
+    banner('Test building rddaniel product')
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=rddaniel ' \
+        'MODE=release ' \
+        'make clean all'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product rddaniel release build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=rddaniel ' \
+        'MODE=release ' \
+        'make clean all'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product rddaniel release build (ARM)', result))
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=rddaniel ' \
+        'MODE=debug ' \
+        'make clean all'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product rddaniel debug build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=rddaniel ' \
+        'MODE=debug ' \
+        'make clean all'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product rddaniel debug build (ARM)', result))
 
     banner('Tests summary')
 

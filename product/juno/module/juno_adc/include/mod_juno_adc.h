@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,10 +24,10 @@
  * \brief ADC Type indices.
  */
 enum juno_adc_sensor_type {
-    /*! Current type ADC */
-    ADC_TYPE_CURRENT = 0,
     /*! Voltage type ADC */
-    ADC_TYPE_VOLT,
+    ADC_TYPE_VOLT = 0,
+    /*! Current type ADC */
+    ADC_TYPE_CURRENT,
     /*! Power type ADC */
     ADC_TYPE_POWER,
     /*! Energy type ADC */

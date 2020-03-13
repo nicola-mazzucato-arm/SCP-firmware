@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -70,11 +70,36 @@ struct __attribute((packed)) scmi_ccix_config_mempools_map {
 #define HA_COUNT_MASK            UINT32_C(0x00FF0000)
 #define HA_COUNT_BIT_POS         16
 
+/*
+ * link_properties bit field definition
+ *
+ * opt_tlp[31]
+ * msg_packing[30]
+ * max_packet_size[29-27]
+ * data_credits[26-18]
+ * snoop_credits[17-9]
+ * request_credits[8-0]
+ */
+#define REQUEST_CREDITS_MASK         UINT32_C(0x000001FF)
+#define REQUEST_CREDITS_BIT_POS      0
+#define SNOOP_CREDITS_MASK           UINT32_C(0x0003FE00)
+#define SNOOP_CREDITS_BIT_POS        9
+#define DATA_CREDITS_MASK            UINT32_C(0x07FC0000)
+#define DATA_CREDITS_BIT_POS         18
+#define HOST_MAX_PACKET_SIZE_MASK    UINT32_C(0x38000000)
+#define HOST_MAX_PACKET_SIZE_BIT_POS 27
+#define HOST_MSG_PACK_MASK           UINT32_C(0x40000000)
+#define HOST_MSG_PACK_BIT_POS        30
+#define HOST_OPT_TLP_MASK            UINT32_C(0x80000000)
+#define HOST_OPT_TLP_BIT_POS         31
+
+
 struct __attribute((packed)) scmi_ccix_config_protocol_get_p2a {
     int32_t  status;
     uint32_t agent_count;
     uint32_t host_mmap_count;
     struct scmi_ccix_config_mempools_map mem_pools[MAX_HA_MMAP_ENTRIES];
+    uint32_t link_properties;
 };
 
 /*
@@ -82,7 +107,8 @@ struct __attribute((packed)) scmi_ccix_config_protocol_get_p2a {
  *
  * config_property bit field definition
  *
- * reserved[31-26]
+ * reserved[31-29]
+ * max_packet_size[28-26]
  * opt_tlp[25]
  * msg_packing[24]
  * link_id[23-16]
@@ -99,6 +125,8 @@ struct __attribute((packed)) scmi_ccix_config_protocol_get_p2a {
 #define MSG_PACK_BIT_POS         24
 #define OPT_TLP_MASK             UINT32_C(0x03000000)
 #define OPT_TLP_BIT_POS          25
+#define MAX_PACKET_SIZE_MASK     UINT32_C(0x1C000000)
+#define MAX_PACKET_SIZE_BIT_POS  26
 
 struct __attribute((packed)) scmi_ccix_config_protocol_set_a2p {
     uint32_t agent_count;

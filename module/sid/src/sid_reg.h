@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -36,6 +36,8 @@ struct sid_reg {
 #define SID_SYS_SOC_ID_MAJOR_REVISION_MASK UINT32_C(0xF000000)
 #define SID_SYS_SOC_ID_MAJOR_REVISION_POS  UINT32_C(24)
 
-#define SID_SYS_NODE_ID_IDENTIFIER_MASK UINT32_C(0xFF)
+#define SID_SYS_NODE_NUMBER_MASK        UINT32_C(0xFF)
+#define SID_SYS_MULTI_CHIP_MODE_MASK    UINT32_C(0x100)
+#define SID_SYS_MULTI_CHIP_MODE_POS     UINT32_C(8)
 
 #endif /* SID_REG_H */

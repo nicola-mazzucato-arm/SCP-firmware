@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -18,7 +18,7 @@ static const uint32_t version_packed = FWK_BUILD_VERSION;
 
 static const struct fwk_element element_table[] = {
     [JUNO_SDS_RAM_VERSION_IDX] = {
-        .name = "RAM Version",
+        .name = "",
         .data = &(struct mod_sds_structure_desc) {
             .id = JUNO_SDS_RAM_VERSION,
             .size = JUNO_SDS_RAM_VERSION_SIZE,
@@ -27,7 +27,7 @@ static const struct fwk_element element_table[] = {
         },
     },
     [JUNO_SDS_RAM_FEATURES_IDX] = {
-        .name = "Feature Availability",
+        .name = "",
         .data = &(struct mod_sds_structure_desc) {
             .id = JUNO_SDS_FEATURE_AVAILABILITY,
             .size = sizeof(feature_flags),

@@ -1,7 +1,6 @@
-
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -132,9 +131,6 @@ struct mod_cmn600_config {
     /*! Host SA count */
     unsigned int sa_count;
 
-    /*! Host CXG LA Node id */
-    unsigned int cxgla_node_id;
-
     /*! Table of region memory map entries */
     const struct mod_cmn600_memory_region_map *mmap_table;
 
@@ -147,11 +143,13 @@ struct mod_cmn600_config {
     /*! Identifier of the clock that this device depends on */
     fwk_id_t clock_id;
 
-    /*! Module ID for getting chip ID information */
-    fwk_id_t chipinfo_mod_id;
-
-    /*! API ID for getting chip ID information */
-    fwk_id_t chipinfo_api_id;
+    /*!
+     * \brief HN-F with CAL support flag
+     * \details When set to true, enables HN-F with CAL support. This flag will
+     * be used only if HN-F is found to be connected to CAL (When connected to
+     * a CAL port, node id of HN-F will be a odd number).
+     */
+    bool hnf_cal_mode;
 };
 
 /*!
@@ -174,10 +172,12 @@ struct mod_cmn600_ccix_ha_mmap {
  * \brief CMN600 CCIX configuration data from remote node
  */
 struct mod_cmn600_ccix_remote_node_config {
-    /*! Remote RA count */
-    uint8_t remote_ra_count;
+    /*!
+     * Count of remote caching agent (RN-F) that can send request to local HNs
+     */
+    uint8_t remote_rnf_count;
 
-    /*! Remote HA count */
+    /*! Remote SA count */
     uint8_t remote_sa_count;
 
     /*! Remote HA count */
@@ -201,8 +201,14 @@ struct mod_cmn600_ccix_remote_node_config {
     /*! Remote HA memory map table count */
     uint8_t remote_ha_mmap_count;
 
+    /*! SMP mode */
+    bool smp_mode;
+
     /*! Remote HA memory map table */
     struct mod_cmn600_ccix_ha_mmap remote_ha_mmap[MAX_HA_MMAP_ENTRIES];
+
+    /*! Max Packet Size */
+    uint8_t ccix_max_packet_size;
 };
 
 /*!
@@ -224,6 +230,23 @@ struct mod_cmn600_ccix_host_node_config {
     /*! CCIX HA memory map table for endpoints */
     struct mod_cmn600_ccix_ha_mmap ccix_host_mmap[MAX_HA_MMAP_ENTRIES];
 
+    /*! CCIX Maximum Memory Request send credits from Host */
+    uint16_t ccix_request_credits;
+
+    /*! CCIX Maximum Snoop send credits from Host */
+    uint16_t ccix_snoop_credits;
+
+    /*! CCIX Maximum Data send credits from Host */
+    uint16_t ccix_data_credits;
+
+    /*! Max Packet Size */
+    uint8_t ccix_max_packet_size;
+
+    /*! CCIX optimised tlp mode capabiltiy of Host */
+    bool    ccix_opt_tlp;
+
+   /*! CCIX message packing flag capability of Host */
+    bool ccix_msg_pack_enable;
 };
 
 /*!
@@ -277,24 +300,6 @@ struct mod_cmn600_ccix_config_api {
     * \return one of the error code otherwise.
     */
    int (*enter_dvm_domain)(uint8_t link_id);
-};
-
-/*!
- * \brief API to read chip information from platform
- */
-struct mod_cmn600_chipinfo_api {
-   /*!
-    * \brief API to be implemented by all platforms using CMN-600.
-    *        Used to get multichip mode and chip ID information from platform.
-    *
-    * \param  chip_id Pointer to storage where chip ID is stored.
-    * \param  multichip_enabled Pointer to storage where multichip
-    *                           flag is stored.
-    *
-    * \retval FWK_SUCCESS if the operation succeed.
-    * \return one of the error code otherwise.
-    */
-   int (*get_chipinfo)(uint8_t *chip_id, bool *multichip_enabled);
 };
 
 /*!

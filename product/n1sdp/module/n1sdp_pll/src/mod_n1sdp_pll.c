@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -272,8 +272,6 @@ static int n1sdp_pll_init(fwk_id_t module_id, unsigned int element_count,
 
     module_ctx.dev_ctx_table = fwk_mm_calloc(element_count,
                                              sizeof(struct n1sdp_pll_dev_ctx));
-    if (module_ctx.dev_ctx_table == NULL)
-        return FWK_E_NOMEM;
 
     module_ctx.mod_config = config;
     /* Validate custom frequency table entries */

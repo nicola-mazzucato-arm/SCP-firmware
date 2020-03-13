@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -54,6 +54,12 @@
 #define BL33_SIZE                     UINT32_C(0x00200000)
 
 /*!
+ * Offset of NIC-400 security 0 register for
+ * non-secure CoreSight debug access
+ */
+#define NIC_400_SEC_0_CSAPBM_OFFSET   UINT32_C(0x2A10001C)
+
+/*!
  * \brief API indices.
  */
 enum mod_n1sdp_system_api_idx {
@@ -62,9 +68,6 @@ enum mod_n1sdp_system_api_idx {
 
     /*! API index for AP memory access */
     MOD_N1SDP_SYSTEM_API_IDX_AP_MEMORY_ACCESS,
-
-    /*! API index for getting chip information */
-    MOD_N1SDP_SYSTEM_API_IDX_CHIPINFO,
 
     /*! Number of exposed interfaces */
     MOD_N1SDP_SYSTEM_API_COUNT,

@@ -1,6 +1,6 @@
 #
 # Arm SCP/MCP Software
-# Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+# Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -19,6 +19,10 @@ endif
 
 ifeq ($(BUILD_HAS_NOTIFICATION),yes)
     DEFINES += BUILD_HAS_NOTIFICATION
+endif
+
+ifdef BUILD_NOTIFICATION_COUNT
+    DEFINES += NOTIFICATION_COUNT=$(BUILD_NOTIFICATION_COUNT)
 endif
 
 export AS := $(CC)
@@ -40,7 +44,7 @@ endif
 # GCC-specific optimization levels for debug and release modes
 #
 
-ifeq ($(PRODUCT),juno)
+ifeq ($(PRODUCT)-$(FIRMWARE),juno-scp_ramfw)
     # Enable link-time optimization
     CFLAGS_GCC += -flto
     LDFLAGS_GCC += -Wl,-flto
@@ -160,6 +164,11 @@ endif
 # Always include the framework library
 #
 INCLUDES += $(FWK_DIR)/include
+
+#
+# Always include CMSIS
+#
+INCLUDES += $(CMSIS_DIR)/Include
 
 #
 # Toolchain-independent flags

@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -24,6 +24,7 @@
 #include <mod_n1sdp_c2c_i2c.h>
 #include <mod_n1sdp_dmc620.h>
 #include <mod_n1sdp_flash.h>
+#include <mod_n1sdp_scp2pcc.h>
 #include <mod_n1sdp_system.h>
 #include <mod_log.h>
 #include <mod_power_domain.h>
@@ -37,7 +38,6 @@
 #include <n1sdp_scp_mmap.h>
 #include <n1sdp_scp_scmi.h>
 #include <n1sdp_sds.h>
-#include <n1sdp_ssc.h>
 #include <config_clock.h>
 
 /*
@@ -133,6 +133,12 @@ struct n1sdp_system_ctx {
 
     /* Pointer to N1SDP C2C slave information API */
     const struct n1sdp_c2c_slave_info_api *c2c_api;
+
+    /* Pointer to N1SDP C2C PD API */
+    const struct n1sdp_c2c_pd_api *c2c_pd_api;
+
+    /* Pointer to SCP to PCC communication API */
+    const struct mod_n1sdp_scp2pcc_api *scp2pcc_api;
 };
 
 struct n1sdp_system_isr {
@@ -198,31 +204,38 @@ static struct n1sdp_system_isr isrs[] = {
 static int n1sdp_system_shutdown(
     enum mod_pd_system_shutdown system_shutdown)
 {
-    NVIC_SystemReset();
+    /* Check if we are running in multichip configuration */
+    if (n1sdp_system_ctx.c2c_api->is_slave_alive()) {
+        n1sdp_system_ctx.c2c_pd_api->shutdown_reboot(
+            N1SDP_C2C_CMD_SHUTDOWN_OR_REBOOT, system_shutdown);
+    }
 
+    switch (system_shutdown) {
+    case MOD_PD_SYSTEM_SHUTDOWN:
+        n1sdp_system_ctx.log_api->log(MOD_LOG_GROUP_INFO,
+            "[N1SDP SYSTEM] Request PCC for system shutdown\n");
+        n1sdp_system_ctx.scp2pcc_api->send(NULL, 0, SCP2PCC_TYPE_SHUTDOWN);
+        break;
+
+    case MOD_PD_SYSTEM_COLD_RESET:
+        n1sdp_system_ctx.log_api->log(MOD_LOG_GROUP_INFO,
+            "[N1SDP SYSTEM] Request PCC for system reboot\n");
+        n1sdp_system_ctx.scp2pcc_api->send(NULL, 0, SCP2PCC_TYPE_REBOOT);
+        break;
+
+    default:
+        n1sdp_system_ctx.log_api->log(MOD_LOG_GROUP_INFO,
+            "[N1SDP SYSTEM] Unknown shutdown command!\n");
+        break;
+    }
+
+    NVIC_SystemReset();
     return FWK_E_DEVICE;
 }
 
 static const struct mod_system_power_driver_api
     n1sdp_system_power_driver_api = {
     .system_shutdown = n1sdp_system_shutdown,
-};
-
-/*
- * Chip information API
- */
-static int n1sdp_get_chipinfo(uint8_t *chip_id, bool *mc_mode)
-{
-    fwk_assert((chip_id != NULL) && (mc_mode != NULL));
-
-    *chip_id = n1sdp_get_chipid();
-    *mc_mode = n1sdp_is_multichip_enabled();
-
-    return FWK_SUCCESS;
-}
-
-static const struct mod_cmn600_chipinfo_api n1sdp_chipinfo_api = {
-    .get_chipinfo = n1sdp_get_chipinfo,
 };
 
 /*
@@ -454,6 +467,12 @@ static int n1sdp_system_init_primary_core(void)
         if (status != FWK_SUCCESS)
             return status;
 
+        /* Enable non-secure CoreSight debug access */
+        n1sdp_system_ctx.log_api->log(MOD_LOG_GROUP_INFO,
+            "[N1SDP SYSTEM] Enabling CoreSight debug non-secure access\n");
+        *(volatile uint32_t *)(AP_SCP_SRAM_OFFSET +
+                               NIC_400_SEC_0_CSAPBM_OFFSET) = 0xFFFFFFFF;
+
         mod_pd_restricted_api = n1sdp_system_ctx.mod_pd_restricted_api;
 
         n1sdp_system_ctx.log_api->log(MOD_LOG_GROUP_DEBUG,
@@ -548,6 +567,18 @@ static int n1sdp_system_bind(fwk_id_t id, unsigned int round)
     if (status != FWK_SUCCESS)
         return status;
 
+    status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_N1SDP_C2C),
+        FWK_ID_API(FWK_MODULE_IDX_N1SDP_C2C, N1SDP_C2C_API_IDX_PD),
+        &n1sdp_system_ctx.c2c_pd_api);
+    if (status != FWK_SUCCESS)
+        return status;
+
+    status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_N1SDP_SCP2PCC),
+        FWK_ID_API(FWK_MODULE_IDX_N1SDP_SCP2PCC, 0),
+        &n1sdp_system_ctx.scp2pcc_api);
+    if (status != FWK_SUCCESS)
+        return status;
+
     return fwk_module_bind(fwk_module_id_sds,
         FWK_ID_API(FWK_MODULE_IDX_SDS, 0),
         &n1sdp_system_ctx.sds_api);
@@ -563,9 +594,6 @@ static int n1sdp_system_process_bind_request(fwk_id_t requester_id,
     case MOD_N1SDP_SYSTEM_API_IDX_AP_MEMORY_ACCESS:
         *api = &n1sdp_system_ap_memory_access_api;
         break;
-    case MOD_N1SDP_SYSTEM_API_IDX_CHIPINFO:
-        *api = &n1sdp_chipinfo_api;
-        break;
     default:
         return FWK_E_PARAM;
     }
@@ -577,6 +605,7 @@ static int n1sdp_system_start(fwk_id_t id)
 {
     int status;
     unsigned int i;
+    uint32_t composite_state;
 
     status = fwk_notification_subscribe(
         mod_clock_notification_id_state_changed,
@@ -596,9 +625,6 @@ static int n1sdp_system_start(fwk_id_t id)
 
             PIK_CLUSTER(0)->CLKFORCE_SET = 0x00000004;
             PIK_CLUSTER(1)->CLKFORCE_SET = 0x00000004;
-
-            /* Enable debugger access in SSC */
-            SSC->SSC_DBGCFG_SET = 0x000000FF;
 
             /* Setup CoreSight counter */
             CS_CNTCONTROL->CS_CNTCR |= (1 << 0);
@@ -641,10 +667,23 @@ static int n1sdp_system_start(fwk_id_t id)
     if (status != FWK_SUCCESS)
         return status;
 
+    if (n1sdp_is_multichip_enabled() && (n1sdp_get_chipid() == 0x0)) {
+        composite_state = MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_3,
+                                                 MOD_PD_STATE_ON,
+                                                 MOD_PD_STATE_ON,
+                                                 MOD_PD_STATE_OFF,
+                                                 MOD_PD_STATE_OFF);
+    } else {
+        composite_state = MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2,
+                                                 0,
+                                                 MOD_PD_STATE_ON,
+                                                 MOD_PD_STATE_OFF,
+                                                 MOD_PD_STATE_OFF);
+    }
+
     return n1sdp_system_ctx.mod_pd_restricted_api->set_composite_state_async(
             FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, 0), false,
-            MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2, 0, MOD_PD_STATE_ON,
-                                   MOD_PD_STATE_OFF, MOD_PD_STATE_OFF));
+            composite_state);
 }
 
 static int n1sdp_system_process_notification(const struct fwk_event *event,

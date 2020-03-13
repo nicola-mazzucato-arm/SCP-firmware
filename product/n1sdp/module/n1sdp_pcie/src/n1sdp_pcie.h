@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -118,7 +118,7 @@
  * This value is same as what Xilinx Hood FPGA expects.
  * To be revisited after consortium finalizes the value.
  */
-#define CCIX_VENDER_ID                 (0x2692)
+#define CCIX_VENDER_ID                 (0x1E2C)
 
 /* PCIe LM root complex bar configuration register bit masks */
 #define TYPE1_PREF_MEM_BAR_ENABLE_MASK      (1U << 17)

@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -171,12 +171,8 @@ osThreadId_t osThreadNew(osThreadFunc_t func, void *argument,
     pthread_t *pthread_id;
 
     thread_data = fwk_mm_calloc(1, sizeof(struct thread_data));
-    if (thread_data == NULL)
-        return NULL;
 
     pthread_id = fwk_mm_calloc(1, sizeof(pthread_t));
-    if (pthread_id == NULL)
-        return NULL;
 
     status = pthread_cond_init(&thread_data->cond, NULL);
     if (status != 0)

@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -649,8 +649,6 @@ static int pik_clock_init(
 
     module_ctx.dev_ctx_table =
         fwk_mm_calloc(element_count, sizeof(struct pik_clock_dev_ctx));
-    if (module_ctx.dev_ctx_table == NULL)
-        return FWK_E_NOMEM;
 
     return FWK_SUCCESS;
 }

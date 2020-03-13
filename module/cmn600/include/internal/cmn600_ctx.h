@@ -1,7 +1,6 @@
-
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -27,9 +26,10 @@ struct external_rnsam_tuple {
 };
 
 /* Max Node Counts */
-#define MAX_HNF_COUNT 4
-#define MAX_RND_COUNT 8
-#define MAX_RNI_COUNT 8
+#define MAX_HNF_COUNT 32
+#define MAX_RND_COUNT 32
+#define MAX_RNF_COUNT 32
+#define MAX_RNI_COUNT 32
 
 struct cmn600_ctx {
     const struct mod_cmn600_config *config;
@@ -62,7 +62,12 @@ struct cmn600_ctx {
      * parameters are known
      */
     unsigned int rnd_count;
-    uint8_t rnd_ldid[8];
+    uint8_t rnd_ldid[MAX_RND_COUNT];
+
+    /*
+     * RN-F nodes. The driver keeps track of the total number of the RN-F nodes.
+     */
+    unsigned int rnf_count;
 
     /*
      * RN-I nodes. The driver keeps a list of RN-I pointers to
@@ -70,14 +75,13 @@ struct cmn600_ctx {
      * parameters are known
      */
     unsigned int rni_count;
-    uint8_t rni_ldid[8];
+    uint8_t rni_ldid[MAX_RNI_COUNT];
 
    /* CCIX specific registers */
     unsigned int cxg_ha_id;
     unsigned int cxg_ha_node_id;
     unsigned int cxg_ha_id_remote;
     uint8_t raid_value;
-    uint8_t unique_ha_ldid_value;
     struct cmn600_cxg_ra_reg *cxg_ra_reg;
     struct cmn600_cxg_ha_reg *cxg_ha_reg;
     struct cmn600_cxla_reg *cxla_reg;
@@ -90,8 +94,8 @@ struct cmn600_ctx {
     /* Timer module API */
     struct mod_timer_api *timer_api;
 
-    /* Chip information API */
-    struct mod_cmn600_chipinfo_api *chipinfo_api;
+    /* Chip information */
+    const struct mod_system_info *system_info;
 
     bool initialized;
 

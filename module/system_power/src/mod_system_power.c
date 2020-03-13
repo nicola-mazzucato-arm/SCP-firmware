@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -27,10 +27,6 @@
                            MOD_PD_STATE_ON, \
                            MOD_PD_STATE_ON, \
                            MOD_PD_STATE_ON)
-
-/* SoC wakeup Power Domain Identifier */
-static const fwk_id_t mod_system_power_soc_wakeup_pd_id =
-    FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_POWER_DOMAIN, 0);
 
 /* Element context */
 struct system_power_dev_ctx {
@@ -75,6 +71,12 @@ struct system_power_ctx {
 
     /* Pointer to module config */
     const struct mod_system_power_config *config;
+
+    /*
+     * Identifier of the power domain of the last standing core before system
+     * suspend.
+     */
+    fwk_id_t last_core_pd_id;
 };
 
 static struct system_power_ctx system_power_ctx;
@@ -91,6 +93,24 @@ static void ext_ppus_set_state(enum mod_pd_state state)
         system_power_ctx.ext_ppu_apis[i]->set_state(
             system_power_ctx.config->ext_ppus[i].ppu_id,
             state);
+    }
+}
+
+static void ext_ppus_shutdown(enum mod_pd_system_shutdown system_shutdown)
+{
+    unsigned int i;
+    const struct mod_pd_driver_api *api;
+    fwk_id_t ppu_id;
+
+    /* Shutdown external PPUs */
+    for (i = 0; i < system_power_ctx.config->ext_ppus_count; i++) {
+        api = system_power_ctx.ext_ppu_apis[i];
+        ppu_id = system_power_ctx.config->ext_ppus[i].ppu_id;
+
+        if (api->shutdown != NULL)
+            api->shutdown(ppu_id, system_shutdown);
+        else
+            api->set_state(ppu_id, MOD_PD_STATE_OFF);
     }
 }
 
@@ -115,6 +135,75 @@ static int set_system_power_state(unsigned int state)
     return FWK_SUCCESS;
 }
 
+static int shutdown_system_power_ppus(
+    enum mod_pd_system_shutdown system_shutdown)
+{
+    unsigned int i;
+    struct system_power_dev_ctx *dev_ctx;
+    const struct mod_pd_driver_api *api;
+    fwk_id_t ppu_id;
+    unsigned int state;
+    int status;
+
+    for (i = 0; i < system_power_ctx.dev_count; i++) {
+        dev_ctx = &system_power_ctx.dev_ctx_table[i];
+
+        api = dev_ctx->sys_ppu_api;
+        ppu_id = dev_ctx->config->sys_ppu_id;
+
+        if (api->shutdown != NULL)
+            status = api->shutdown(ppu_id, system_shutdown);
+        else {
+            state = dev_ctx->config->sys_state_table[MOD_PD_STATE_OFF];
+
+            status = api->set_state(ppu_id, state);
+        }
+        if (status != FWK_SUCCESS)
+            return status;
+    }
+
+    return FWK_SUCCESS;
+}
+
+static int disable_all_irqs(void)
+{
+    int status = FWK_SUCCESS;
+
+    fwk_interrupt_disable(system_power_ctx.config->soc_wakeup_irq);
+
+    if (system_power_ctx.driver_api->platform_interrupts != NULL) {
+        status = system_power_ctx.driver_api->platform_interrupts(
+            MOD_SYSTEM_POWER_PLATFORM_INTERRUPT_CMD_DISABLE);
+        if (status != FWK_SUCCESS)
+            status = FWK_E_DEVICE;
+    }
+
+    return status;
+}
+
+static int shutdown(
+    fwk_id_t pd_id,
+    enum mod_pd_system_shutdown system_shutdown)
+{
+    int status;
+
+    status = disable_all_irqs();
+    if (status != FWK_SUCCESS)
+        return status;
+
+    /* Shutdown external PPUs */
+    ext_ppus_shutdown(system_shutdown);
+
+    system_power_ctx.requested_state = MOD_PD_STATE_OFF;
+
+    /* Shutdown system PPUs */
+    status = shutdown_system_power_ppus(system_shutdown);
+    if (status != FWK_SUCCESS)
+        return status;
+
+    return FWK_SUCCESS;
+}
+
 /*
  * Functions fulfilling the Power Domain module's driver API
  */
@@ -133,14 +222,9 @@ static int system_power_set_state(fwk_id_t pd_id, unsigned int state)
 
     switch (state) {
     case MOD_PD_STATE_ON:
-        fwk_interrupt_disable(soc_wakeup_irq);
-
-        if (system_power_ctx.driver_api->platform_interrupts != NULL) {
-            status = system_power_ctx.driver_api->platform_interrupts(
-                MOD_SYSTEM_POWER_PLATFORM_INTERRUPT_CMD_DISABLE);
-            if (status != FWK_SUCCESS)
-                return FWK_E_DEVICE;
-        }
+        status = disable_all_irqs();
+        if (status != FWK_SUCCESS)
+            return status;
 
         status = set_system_power_state(state);
         if (status != FWK_SUCCESS)
@@ -167,6 +251,12 @@ static int system_power_set_state(fwk_id_t pd_id, unsigned int state)
         if (status != FWK_SUCCESS)
             return status;
 
+        /* Store the identifier of the power domain of the last standing core */
+        status = system_power_ctx.mod_pd_driver_input_api->
+            get_last_core_pd_id(&system_power_ctx.last_core_pd_id);
+        if (status != FWK_SUCCESS)
+            return status;
+
         fwk_interrupt_enable(soc_wakeup_irq);
 
         if (system_power_ctx.driver_api->platform_interrupts != NULL) {
@@ -179,14 +269,9 @@ static int system_power_set_state(fwk_id_t pd_id, unsigned int state)
         break;
 
     case MOD_PD_STATE_OFF:
-        fwk_interrupt_disable(soc_wakeup_irq);
-
-        if (system_power_ctx.driver_api->platform_interrupts != NULL) {
-            status = system_power_ctx.driver_api->platform_interrupts(
-                MOD_SYSTEM_POWER_PLATFORM_INTERRUPT_CMD_DISABLE);
-            if (status != FWK_SUCCESS)
-                return FWK_E_DEVICE;
-        }
+        status = disable_all_irqs();
+        if (status != FWK_SUCCESS)
+            return status;
 
         ext_ppus_set_state(MOD_PD_STATE_OFF);
 
@@ -220,7 +305,7 @@ static int system_power_shutdown(fwk_id_t pd_id,
 {
     int status;
 
-    status = system_power_set_state(pd_id, MOD_PD_STATE_OFF);
+    status = shutdown(pd_id, system_shutdown);
     if (status != FWK_SUCCESS)
         return status;
 
@@ -232,9 +317,13 @@ static void soc_wakeup_handler(void)
     int status;
     uint32_t state = MOD_SYSTEM_POWER_SOC_WAKEUP_STATE;
 
+    status = disable_all_irqs();
+    if (status != FWK_SUCCESS)
+        fwk_trap();
+
     status =
         system_power_ctx.mod_pd_restricted_api->set_composite_state_async(
-            mod_system_power_soc_wakeup_pd_id, false, state);
+            system_power_ctx.last_core_pd_id, false, state);
     fwk_expect(status == FWK_SUCCESS);
 }
 
@@ -292,15 +381,11 @@ static int system_power_mod_init(fwk_id_t module_id,
 
     system_power_ctx.dev_ctx_table =
         fwk_mm_calloc(element_count, sizeof(struct system_power_dev_ctx));
-    if (system_power_ctx.dev_ctx_table == NULL)
-        return FWK_E_NOMEM;
 
     if (system_power_ctx.config->ext_ppus_count > 0) {
         system_power_ctx.ext_ppu_apis = fwk_mm_calloc(
             system_power_ctx.config->ext_ppus_count,
             sizeof(system_power_ctx.ext_ppu_apis[0]));
-        if (system_power_ctx.ext_ppu_apis == NULL)
-            return FWK_E_NOMEM;
     }
 
     if (system_power_ctx.config->soc_wakeup_irq != FWK_INTERRUPT_NONE) {

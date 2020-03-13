@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -55,9 +55,11 @@ struct alarm_ctx {
     /* Flag indicating if this alarm if periodic */
     bool periodic;
     /* Flag indicating if this alarm is in the active queue */
-    bool started;
+    bool activated;
     /* Flag indicating if this alarm has been bound to */
     bool bound;
+    /* Flag indicating if this alarm is started */
+    bool started;
 };
 
 /* Table of timer device context structures */
@@ -181,7 +183,7 @@ static void _insert_alarm_ctx_into_active_queue(struct dev_ctx *ctx,
                     &(alarm_new->node),
                     alarm_node);
 
-    alarm_new->started = true;
+    alarm_new->activated = true;
 }
 
 
@@ -352,12 +354,37 @@ static const struct mod_timer_api timer_api = {
 
 static int alarm_stop(fwk_id_t alarm_id)
 {
+    int status;
     struct dev_ctx *ctx;
     struct alarm_ctx *alarm;
+    unsigned int interrupt;
 
     assert(fwk_module_is_valid_sub_element_id(alarm_id));
 
     ctx = &ctx_table[fwk_id_get_element_idx(alarm_id)];
+
+    status = fwk_interrupt_get_current(&interrupt);
+    switch (status) {
+    case FWK_E_STATE:
+        /* Not within an ISR */
+        break;
+
+    case FWK_SUCCESS:
+        /* Within an ISR */
+
+        if (interrupt == ctx->config->timer_irq) {
+            /*
+             * The interrupt handler is the interrupt handler for the alarm's
+             * timer
+             */
+            break;
+        }
+        /* Fall-through */
+
+    default:
+        return FWK_E_ACCESS;
+    }
+
     alarm = &ctx->alarm_pool[fwk_id_get_sub_element_idx(alarm_id)];
 
     /* Prevent possible data races with the timer interrupt */
@@ -367,6 +394,11 @@ static int alarm_stop(fwk_id_t alarm_id)
         ctx->driver->enable(ctx->driver_dev_id);
         return FWK_E_STATE;
     }
+
+    alarm->started = false;
+
+    if (!alarm->activated)
+        return FWK_SUCCESS;
 
     /*
      * If the alarm is stopped while the interrupts are globally disabled, an
@@ -380,7 +412,7 @@ static int alarm_stop(fwk_id_t alarm_id)
     fwk_interrupt_clear_pending(ctx->config->timer_irq);
 
     fwk_list_remove(&ctx->alarms_active, (struct fwk_dlist_node *)alarm);
-    alarm->started = false;
+    alarm->activated = false;
 
     _configure_timer_with_next_alarm(ctx);
 
@@ -396,14 +428,26 @@ static int alarm_start(fwk_id_t alarm_id,
     int status;
     struct dev_ctx *ctx;
     struct alarm_ctx *alarm;
+    unsigned int interrupt;
 
     assert(fwk_module_is_valid_sub_element_id(alarm_id));
+
+    status = fwk_interrupt_get_current(&interrupt);
+    if (status != FWK_E_STATE) {
+        /*
+         * Could not attain call context OR this function is called from an
+         * interrupt handler.
+         */
+        return FWK_E_ACCESS;
+    }
 
     ctx = ctx_table + fwk_id_get_element_idx(alarm_id);
     alarm = &ctx->alarm_pool[fwk_id_get_sub_element_idx(alarm_id)];
 
     if (alarm->started)
         alarm_stop(alarm_id);
+
+    alarm->started = true;
 
     /* Cap to ensure value will not overflow when stored as microseconds */
     milliseconds = FWK_MIN(milliseconds, UINT32_MAX / 1000);
@@ -456,12 +500,12 @@ static void timer_isr(uintptr_t ctx_ptr)
         return;
     }
 
-    alarm->started = false;
+    alarm->activated = false;
 
     /* Execute the callback function */
     alarm->callback(alarm->param);
 
-    if (alarm->periodic) {
+    if (alarm->periodic && alarm->started) {
         /* Put this alarm back into the active queue */
         status = _time_to_timestamp(ctx, alarm->microseconds, &timestamp);
 
@@ -487,9 +531,6 @@ static int timer_init(fwk_id_t module_id,
 {
     ctx_table = fwk_mm_calloc(element_count, sizeof(struct dev_ctx));
 
-    if (ctx_table == NULL)
-        return FWK_E_NOMEM;
-
     return FWK_SUCCESS;
 }
 
@@ -503,13 +544,8 @@ static int timer_device_init(fwk_id_t element_id, unsigned int alarm_count,
     ctx = ctx_table + fwk_id_get_element_idx(element_id);
     ctx->config = data;
 
-    if (alarm_count > 0) {
+    if (alarm_count > 0)
         ctx->alarm_pool = fwk_mm_calloc(alarm_count, sizeof(struct alarm_ctx));
-        if (ctx->alarm_pool == NULL) {
-            assert(false);
-            return FWK_E_NOMEM;
-        }
-    }
 
     return FWK_SUCCESS;
 }

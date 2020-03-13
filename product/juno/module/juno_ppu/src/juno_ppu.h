@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -54,6 +54,9 @@ struct module_ctx {
 
     /* Log module API */
     const struct mod_log_api *log_api;
+
+    /* Timer alarm API */
+    const struct mod_timer_alarm_api *alarm_api;
 
     /* CSS power state */
     unsigned int css_state;

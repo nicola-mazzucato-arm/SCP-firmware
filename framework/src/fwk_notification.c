@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -151,10 +151,6 @@ int __fwk_notification_init(size_t notification_count)
 
     subscription_table = fwk_mm_calloc(
         notification_count, sizeof(struct __fwk_notification_subscription));
-    if (subscription_table == NULL) {
-        FWK_HOST_PRINT(err_msg_func, FWK_E_NOMEM, __func__);
-        return FWK_E_NOMEM;
-    }
 
     /* All the subscription structures are free to be used. */
     fwk_list_init(&ctx.free_subscription_dlist);
@@ -305,8 +301,15 @@ int fwk_notification_notify(struct fwk_event *notification_event,
         }
     } else {
         current_event = __fwk_thread_get_current_event();
-        if (current_event != NULL)
+
+        if ((current_event != NULL) &&
+            (!fwk_module_is_valid_entity_id(notification_event->source_id))) {
+            /*
+             * The source_id provided is not valid, use the identifier of the
+             * target for the current event.
+             */
             notification_event->source_id = current_event->target_id;
+        }
     }
 
     if (!fwk_module_is_valid_notification_id(notification_event->id) ||

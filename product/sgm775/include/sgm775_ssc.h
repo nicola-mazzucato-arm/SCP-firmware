@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -37,6 +37,10 @@ struct ssc_reg {
     FWK_R  uint32_t COMPID1;
     FWK_R  uint32_t COMPID2;
     FWK_R  uint32_t COMPID3;
+};
+
+enum ssc_part {
+    SSC_PART_SGM_775 = 0x790,
 };
 
 #endif /* SGM775_SSC_H */

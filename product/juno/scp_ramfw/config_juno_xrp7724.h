@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -12,6 +12,10 @@
 enum mod_juno_xrp7724_element_idx {
     MOD_JUNO_XRP7724_ELEMENT_IDX_SENSOR,
     MOD_JUNO_XRP7724_ELEMENT_IDX_GPIO,
+    MOD_JUNO_XRP7724_ELEMENT_IDX_PSU_VSYS,
+    MOD_JUNO_XRP7724_ELEMENT_IDX_PSU_VBIG,
+    MOD_JUNO_XRP7724_ELEMENT_IDX_PSU_VLITTLE,
+    MOD_JUNO_XRP7724_ELEMENT_IDX_PSU_VGPU,
     MOD_JUNO_XRP7724_ELEMENT_IDX_COUNT
 };
 

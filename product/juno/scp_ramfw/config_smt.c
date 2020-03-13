@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -17,7 +17,7 @@
 
 static const struct fwk_element element_table[] = {
     [JUNO_SCMI_SERVICE_IDX_PSCI] = {
-        .name = "PSCI",
+        .name = "",
         .data = &(struct mod_smt_channel_config) {
             .type = MOD_SMT_CHANNEL_TYPE_SLAVE,
             .policies = (MOD_SMT_POLICY_INIT_MAILBOX | MOD_SMT_POLICY_SECURE),
@@ -34,7 +34,7 @@ static const struct fwk_element element_table[] = {
         }
     },
     [JUNO_SCMI_SERVICE_IDX_OSPM_0] = {
-        .name = "OSPM0",
+        .name = "",
         .data = &(struct mod_smt_channel_config) {
             .type = MOD_SMT_CHANNEL_TYPE_SLAVE,
             .policies = MOD_SMT_POLICY_INIT_MAILBOX,
@@ -51,7 +51,7 @@ static const struct fwk_element element_table[] = {
         }
     },
     [JUNO_SCMI_SERVICE_IDX_OSPM_1] = {
-        .name = "OSPM1",
+        .name = "",
         .data = &(struct mod_smt_channel_config) {
             .type = MOD_SMT_CHANNEL_TYPE_SLAVE,
             .policies = MOD_SMT_POLICY_INIT_MAILBOX,

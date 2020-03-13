@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -567,13 +567,9 @@ static int scmi_init(fwk_id_t module_id, unsigned int service_count,
     scmi_ctx.protocol_table = fwk_mm_calloc(
         config->protocol_count_max + PROTOCOL_TABLE_RESERVED_ENTRIES_COUNT,
         sizeof(scmi_ctx.protocol_table[0]));
-    if (scmi_ctx.protocol_table == NULL)
-        return FWK_E_NOMEM;
 
     scmi_ctx.service_ctx_table = fwk_mm_calloc(
         service_count, sizeof(scmi_ctx.service_ctx_table[0]));
-    if (scmi_ctx.service_ctx_table == NULL)
-        return FWK_E_NOMEM;
 
     scmi_ctx.protocol_table[PROTOCOL_TABLE_BASE_PROTOCOL_IDX].message_handler =
         scmi_base_message_handler;
@@ -822,6 +818,7 @@ static int scmi_process_notification(const struct fwk_event *event,
     /* Notify that this service is ready */
     struct fwk_event scmi_services_initialized_notification = {
         .id = mod_scmi_notification_id_initialized,
+        .source_id = FWK_ID_NONE
     };
 
     return fwk_notification_notify(&scmi_services_initialized_notification,

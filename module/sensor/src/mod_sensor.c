@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -140,9 +140,6 @@ static int sensor_init(fwk_id_t module_id,
                        const void *unused)
 {
     ctx_table = fwk_mm_calloc(element_count, sizeof(ctx_table[0]));
-
-    if (ctx_table == NULL)
-        return FWK_E_NOMEM;
 
     return FWK_SUCCESS;
 }

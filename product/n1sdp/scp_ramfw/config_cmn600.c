@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -21,8 +21,6 @@
 #define NODE_ID_HND      0x68
 #define NODE_ID_SBSX     0x64
 #define NODE_ID_CCIX     0x0
-#define NODE_ID_CXGLA    0x2
-
 
 static const unsigned int snf_table[] = {
     DMC0_ID, /* Maps to HN-F logical node 0 */
@@ -173,14 +171,11 @@ const struct fwk_module_config config_cmn600 = {
         .snf_table = snf_table,
         .snf_count = FWK_ARRAY_SIZE(snf_table),
         .sa_count  = 2,
-        .cxgla_node_id = NODE_ID_CXGLA,
         .mmap_table = mmap,
         .mmap_count = FWK_ARRAY_SIZE(mmap),
         .chip_addr_space = UINT64_C(4) * FWK_TIB,
         .clock_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_CLOCK,
             CLOCK_IDX_INTERCONNECT),
-        .chipinfo_api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_SYSTEM,
-            MOD_N1SDP_SYSTEM_API_IDX_CHIPINFO),
-        .chipinfo_mod_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_N1SDP_SYSTEM),
+        .hnf_cal_mode = false,
     }),
 };

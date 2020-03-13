@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -25,6 +25,9 @@
 #include <n1sdp_scc_reg.h>
 #include <n1sdp_scp_pik.h>
 #include <internal/pcie_ctrl_apb_reg.h>
+
+void pcie_bus_enumeration(struct n1sdp_pcie_dev_config *config);
+void pcie_init_bdf_table(struct n1sdp_pcie_dev_config *config);
 
 /*
  * Device context
@@ -295,6 +298,7 @@ static int n1sdp_pcie_link_training(fwk_id_t id, bool ep_mode)
                        gen_speed);
     if (status != FWK_SUCCESS) {
         pcie_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Timeout!\n");
+        pcie_init_bdf_table(dev_ctx->config);
         return status;
     }
     pcie_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Done\n");
@@ -505,6 +509,8 @@ static int n1sdp_pcie_rc_setup(fwk_id_t id)
     pcie_ctx.timer_api->delay(FWK_ID_ELEMENT(FWK_MODULE_IDX_TIMER, 0),
                                  PCIE_LINK_TRAINING_TIMEOUT);
 
+    pcie_bus_enumeration(dev_ctx->config);
+
     return FWK_SUCCESS;
 }
 
@@ -615,8 +621,6 @@ static int n1sdp_pcie_init(fwk_id_t module_id, unsigned int element_count,
 
     pcie_ctx.device_ctx_table = fwk_mm_calloc(element_count,
         sizeof(pcie_ctx.device_ctx_table[0]));
-    if (pcie_ctx.device_ctx_table == NULL)
-        return FWK_E_NOMEM;
 
     pcie_ctx.pcie_instance_count = element_count;
 

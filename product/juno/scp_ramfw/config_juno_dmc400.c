@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -36,7 +36,7 @@
 
 static struct fwk_element juno_dmc400_element_table[] = {
     [0] = {
-        .name = "DMC400",
+        .name = "",
         .data = &((struct mod_juno_dmc400_element_config) {
             .dmc = DMC400_BASE,
             .ddr_phy_0_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_JUNO_DDR_PHY400,

@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -38,7 +38,7 @@ noreturn void arm_exception_reset(void)
 #endif
 }
 
-noreturn void arm_exception_invalid(void)
+noreturn __attribute__((weak)) void arm_exception_invalid(void)
 {
     while (true)
         __WFI();

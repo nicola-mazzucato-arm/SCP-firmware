@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -180,10 +180,17 @@ static int ppu_v1_pd_reset(fwk_id_t pd_id)
     return status;
 }
 
+static int ppu_v1_pd_shutdown(fwk_id_t core_pd_id,
+    enum mod_pd_system_shutdown system_shutdown)
+{
+    return FWK_SUCCESS;
+}
+
 static const struct mod_pd_driver_api pd_driver = {
     .set_state = ppu_v1_pd_set_state,
     .get_state = ppu_v1_pd_get_state,
     .reset = ppu_v1_pd_reset,
+    .shutdown = ppu_v1_pd_shutdown,
 };
 
 /*
@@ -353,7 +360,9 @@ static const struct mod_pd_driver_api core_pd_driver = {
     .set_state = ppu_v1_core_pd_set_state,
     .get_state = ppu_v1_pd_get_state,
     .reset = ppu_v1_core_pd_reset,
-    .prepare_core_for_system_suspend = ppu_v1_core_pd_prepare_for_system_suspend
+    .prepare_core_for_system_suspend =
+        ppu_v1_core_pd_prepare_for_system_suspend,
+    .shutdown = ppu_v1_pd_shutdown,
 };
 
 /*
@@ -584,6 +593,7 @@ static const struct mod_pd_driver_api cluster_pd_driver = {
     .set_state = ppu_v1_cluster_pd_set_state,
     .get_state = ppu_v1_pd_get_state,
     .reset = ppu_v1_pd_reset,
+    .shutdown = ppu_v1_pd_shutdown,
 };
 
 static void ppu_interrupt_handler(uintptr_t pd_ctx_param)
@@ -638,8 +648,6 @@ static int ppu_v1_mod_init(fwk_id_t module_id, unsigned int pd_count,
 {
     ppu_v1_ctx.pd_ctx_table = fwk_mm_calloc(pd_count,
                                             sizeof(struct ppu_v1_pd_ctx));
-    if (ppu_v1_ctx.pd_ctx_table == NULL)
-        return FWK_E_NOMEM;
 
     ppu_v1_ctx.pd_ctx_table_size = pd_count;
 
@@ -667,8 +675,6 @@ static int ppu_v1_pd_init(fwk_id_t pd_id, unsigned int unused, const void *data)
 
     if (config->pd_type == MOD_PD_TYPE_CLUSTER) {
         pd_ctx->data = fwk_mm_calloc(1, sizeof(struct ppu_v1_cluster_pd_ctx));
-        if (pd_ctx->data == NULL)
-            return FWK_E_NOMEM;
     }
 
     if (config->default_power_on) {

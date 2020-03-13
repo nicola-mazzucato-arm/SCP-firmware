@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -983,8 +983,6 @@ static int scmi_clock_init(fwk_id_t module_id, unsigned int element_count,
     scmi_clock_ctx.clock_ops =
         fwk_mm_calloc((unsigned int)clock_devices,
         sizeof(struct clock_operations));
-    if (scmi_clock_ctx.clock_ops == NULL)
-        return FWK_E_NOMEM;
 
     /* Initialize table */
     for (unsigned int i = 0; i < (unsigned int)clock_devices; i++)

@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -497,8 +497,6 @@ static int n1sdp_i2c_init(fwk_id_t module_id, unsigned int element_count,
 
     i2c_ctx.device_ctx_table = fwk_mm_calloc(element_count,
         sizeof(i2c_ctx.device_ctx_table[0]));
-    if (i2c_ctx.device_ctx_table == NULL)
-        return FWK_E_NOMEM;
 
     return FWK_SUCCESS;
 }

@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -21,7 +21,7 @@ static const struct fwk_element element_table[] = {
                 .async_response_api_id = FWK_ID_NONE_INIT,
 
                 .default_enabled = true,
-                .default_voltage = 100,
+                .default_voltage = 800,
             },
     },
     {
@@ -35,7 +35,7 @@ static const struct fwk_element element_table[] = {
                 .async_response_api_id = FWK_ID_NONE_INIT,
 
                 .default_enabled = true,
-                .default_voltage = 100,
+                .default_voltage = 800,
             },
     },
     { 0 }

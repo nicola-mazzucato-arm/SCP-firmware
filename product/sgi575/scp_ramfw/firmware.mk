@@ -1,6 +1,6 @@
 #
 # Arm SCP/MCP Software
-# Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+# Copyright (c) 2018-2020, Arm Limited and Contributors. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -45,6 +45,8 @@ BS_FIRMWARE_MODULES := \
     scmi_perf \
     scmi_power_domain \
     scmi_system_power \
+    ssc \
+    system_info \
     scmi_apcore
 
 BS_FIRMWARE_SOURCES := \
@@ -74,6 +76,8 @@ BS_FIRMWARE_SOURCES := \
     config_scmi_perf.c \
     config_scmi_system_power.c \
     config_scmi_apcore.c \
+    config_ssc.c \
+    config_system_info.c \
     config_apcontext.c
 
 include $(BS_DIR)/firmware.mk

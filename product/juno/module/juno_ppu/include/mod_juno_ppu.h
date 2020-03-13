@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -56,6 +56,18 @@ static const fwk_id_t mod_juno_ppu_api_id_pd =
  */
 static const fwk_id_t mod_juno_ppu_api_id_rom =
     FWK_ID_API_INIT(FWK_MODULE_IDX_JUNO_PPU, MOD_JUNO_PPU_API_IDX_ROM);
+
+/*!
+ * \brief Module configuration.
+ */
+struct mod_juno_ppu_config {
+    /*!
+     * \brief Identifier of the timer alarm.
+     *
+     * \details Used for polling a core PPU state during system suspend.
+     */
+    fwk_id_t timer_alarm_id;
+};
 
 /*!
  * \brief Element configuration.

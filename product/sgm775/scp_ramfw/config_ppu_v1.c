@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -55,13 +55,9 @@ static const struct fwk_element *sgm775_ppu_v1_get_element_table
      */
     element_table = fwk_mm_calloc(sgm775_core_get_count() + 2,
                                   sizeof(struct fwk_element));
-    if (element_table == NULL)
-        return NULL;
 
     pd_config_table = fwk_mm_calloc(sgm775_core_get_count() + 1,
                                     sizeof(struct mod_ppu_v1_pd_config));
-    if (pd_config_table == NULL)
-        return NULL;
 
     for (core_idx = 0; core_idx < sgm775_core_get_count(); core_idx++) {
         element = &element_table[core_idx];

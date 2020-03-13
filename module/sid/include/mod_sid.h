@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -55,8 +55,11 @@ struct mod_sid_info {
     /*! Part number of the SoC */
     unsigned int soc_part_number;
 
-    /*! ID for the node when there are multiple sockets */
-    unsigned int node_id;
+    /*! Multi-chip mode tie-off value - enabled or disabled */
+    bool multi_chip_mode;
+
+    /*! Node number indicating the chip id in multi socket system */
+    uint8_t node_number;
 
     /*! Configuration number of the subsystem */
     unsigned int config_number;
@@ -99,6 +102,14 @@ struct mod_sid_subsystem_config {
  * \retval FWK_E_INIT The system information is not initialized.
  */
 int mod_sid_get_system_info(const struct mod_sid_info **system_info);
+
+/*!
+ * \brief Module API indices.
+ */
+enum mod_sid_api_idx {
+    MOD_SID_SYSTEM_INFO_DRIVER_DATA_API_IDX,
+    MOD_SID_API_COUNT
+};
 
 /*!
  * @}

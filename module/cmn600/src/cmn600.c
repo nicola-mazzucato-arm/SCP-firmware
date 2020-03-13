@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -9,6 +9,9 @@
 #include <fwk_macros.h>
 #include <fwk_math.h>
 #include <cmn600.h>
+
+static unsigned int encoding_bits;
+static unsigned int mask_bits;
 
 unsigned int get_node_child_count(void *node_base)
 {
@@ -67,10 +70,34 @@ unsigned int get_child_node_id(void *node_base,
     return device_id;
 }
 
+unsigned int get_cmn600_revision(struct cmn600_cfgm_reg *root)
+{
+    return (root->PERIPH_ID[1] & CMN600_PERIPH_ID_2_MASK);
+}
+
+bool is_cal_mode_supported(struct cmn600_cfgm_reg *root)
+{
+    return (get_cmn600_revision(root) >= CMN600_PERIPH_ID_2_REV_R2_P0) ?
+            true : false;
+}
+
 bool is_child_external(void *node_base, unsigned int child_index)
 {
     struct node_header *node = node_base;
     return !!(node->CHILD_POINTER[child_index] & (UINT64_C(1) << 31));
+}
+
+bool get_port_number(unsigned int child_node_id)
+{
+    return (child_node_id >> CMN600_NODE_ID_PORT_POS) &
+        CMN600_NODE_ID_PORT_MASK;
+}
+
+unsigned int get_device_type(void *mxp_base, bool port)
+{
+    struct cmn600_mxp_reg *mxp = mxp_base;
+    return mxp->PORT_CONNECT_INFO[port] &
+        CMN600_MXP_PORT_CONNECT_INFO_DEVICE_TYPE_MASK;
 }
 
 uint64_t sam_encode_region_size(uint64_t size)
@@ -80,6 +107,9 @@ uint64_t sam_encode_region_size(uint64_t size)
 
     /* Size must be a multiple of SAM_GRANULARITY */
     assert((size % SAM_GRANULARITY) == 0);
+
+    /* Size also must be a power of two */
+    assert((size & (size - 1)) == 0);
 
     blocks = size / SAM_GRANULARITY;
     result = fwk_math_log2(blocks);
@@ -143,20 +173,19 @@ const char *get_node_type_name(enum node_type node_type)
 unsigned int get_node_pos_x(void *node_base)
 {
     struct node_header *node = node_base;
-    return (unsigned int)((node->NODE_INFO >> 21) & 0x3);
+    return (get_node_id(node) >> (CMN600_NODE_ID_Y_POS + encoding_bits)) &
+            mask_bits;
 }
 
 unsigned int get_node_pos_y(void *node_base)
 {
     struct node_header *node = node_base;
-    return (unsigned int)((node->NODE_INFO >> 19) & 0x3);
+    return (get_node_id(node) >> CMN600_NODE_ID_Y_POS) & mask_bits;
 }
 
 struct cmn600_cfgm_reg *get_root_node(uintptr_t base, unsigned int hnd_node_id,
     unsigned int mesh_size_x, unsigned int mesh_size_y)
 {
-    unsigned int encoding_bits;
-    unsigned int mask_bits;
     unsigned int node_pos_x;
     unsigned int node_pos_y;
     unsigned int node_port;

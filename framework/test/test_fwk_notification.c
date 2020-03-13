@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2018-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -128,10 +128,6 @@ static void test___fwk_notification_init(void)
     int result;
     size_t notification_count = 4;
 
-    /* Memory allocation failed */
-    fwk_mm_calloc_return_val = false;
-    result = __fwk_notification_init(notification_count);
-    assert(result == FWK_E_NOMEM);
     fwk_mm_calloc_return_val = true;
 
     /* Insert 2 events in the list */
@@ -355,8 +351,8 @@ static void test_fwk_notification_notify(void)
 
     /* Call from a thread, current event, incompatible notification and
        source identifier. */
-    current_event.target_id = FWK_ID_ELEMENT(0x1, 0x9);
-    notification_event.source_id = FWK_ID_ELEMENT(0x2, 0x9);
+    current_event.target_id = FWK_ID_ELEMENT(0x2, 0x9);
+    notification_event.source_id = FWK_ID_ELEMENT(0x3, 0x9);
     notification_event.id = FWK_ID_NOTIFICATION(0x2, 0x1);
     get_current_event_return_val = &current_event;
     result = fwk_notification_notify(&notification_event, &count);
@@ -428,8 +424,8 @@ static void test_fwk_notification_notify(void)
 
     current_event.target_id = FWK_ID_MODULE(0x2);
     get_current_event_return_val = &current_event;
-    notification_event.source_id = FWK_ID_ELEMENT(0x2, 0x9);
     notification_event.id = FWK_ID_NOTIFICATION(0x2, 0x1);
+    is_valid_entity_id_return_val = false;
     result = fwk_notification_notify(&notification_event, &count);
     assert(result == FWK_SUCCESS);
     assert(count == 1);

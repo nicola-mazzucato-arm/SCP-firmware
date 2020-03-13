@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -455,6 +455,8 @@ struct mod_pd_driver_api {
      * \param system_shutdown Type of system shutdown.
      *
      * \retval FWK_SUCCESS The operation succeeded.
+     * \retval FWK_PENDING The operation was acknowledged. Please note that at
+     *      present there is no dedicated driver input api for this case.
      * \retval FWK_E_ACCESS Invalid access, the framework has rejected the
      *      call to the API.
      */
@@ -718,6 +720,8 @@ struct mod_pd_restricted_api {
      *
      * \retval FWK_E_ACCESS Invalid access, the framework has rejected the
      *      call to the API.
+     * \retval FWK_PENDING Request aknowledged. A response event will not be
+     *      sent to the caller.
      * \retval FWK_E_HANDLER The function is not called from a thread.
      * \retval FWK_E_NOMEM Failed to allocate a request descriptor.
      */
@@ -816,6 +820,28 @@ struct mod_pd_driver_input_api {
      * \retval FWK_E_PARAM The power domain identifier is unknown.
      */
     int (*report_power_state_transition)(fwk_id_t pd_id, unsigned int state);
+
+    /*!
+     * \brief Get the power domain identifier of the last core online before or
+     *      during system suspend.
+     *
+     * \details When an agent calls for system suspend, the power domain module
+     *      ensures that all cores are turned off except for one, which is the
+     *      calling entity. Because any core can call system suspend, it may be
+     *      necessary for a driver to know which core called system suspend.
+     *      With this information the driver can, for example, safely resume the
+     *      system from the same core which was turned off lastly.
+     *
+     * \note The power domain module does not perform any checks to ensure that
+     *      this function is called during a system suspend sequence.
+     *
+     * \param[out] last_core_pd_id Identifier of the last core.
+     *
+     * \retval FWK_E_PARAM The pointer to the identifier is not valid.
+     * \retval FWK_SUCCESS The request was successful.
+     * \return One of the standard framework error codes.
+     */
+    int (*get_last_core_pd_id)(fwk_id_t *last_core_pd_id);
 };
 
 /*!
@@ -846,6 +872,22 @@ struct mod_pd_power_state_pre_transition_notification_resp_params {
 struct mod_pd_power_state_transition_notification_params {
     /*! Power state the power domain has transitioned to */
     unsigned int state;
+};
+
+/*!
+ * \brief Parameters of a pre-shutdown transition notification.
+ */
+struct mod_pd_pre_shutdown_notif_params {
+    /*! System shutdown type the system is transitioning to */
+    enum mod_pd_system_shutdown system_shutdown;
+};
+
+/*!
+ * \brief Parameters of the response to a pre-shutdown transition notification.
+ */
+struct mod_pd_pre_shutdown_notif_resp_params {
+    /*! Status of the operation from the entity being notified */
+    int status;
 };
 
 /*!
@@ -887,6 +929,9 @@ enum mod_pd_notification_idx {
     /*! Power state pre-transition */
     MOD_PD_NOTIFICATION_IDX_POWER_STATE_PRE_TRANSITION,
 
+    /*! Broadcast notification before shutdown starts */
+    MOD_PD_NOTIFICATION_IDX_PRE_SHUTDOWN,
+
     /*! Number of notifications defined by the power domain module */
     MOD_PD_NOTIFICATION_COUNT,
 };
@@ -904,6 +949,16 @@ static const fwk_id_t mod_pd_notification_id_power_state_transition =
 static const fwk_id_t mod_pd_notification_id_power_state_pre_transition =
     FWK_ID_NOTIFICATION_INIT(FWK_MODULE_IDX_POWER_DOMAIN,
         MOD_PD_NOTIFICATION_IDX_POWER_STATE_PRE_TRANSITION);
+
+/*!
+ * Identifier of the pre-shutdown notification.
+ *
+ * \note This notification will be broadcast with module identifier only.
+ */
+static const fwk_id_t mod_pd_notification_id_pre_shutdown =
+    FWK_ID_NOTIFICATION_INIT(FWK_MODULE_IDX_POWER_DOMAIN,
+        MOD_PD_NOTIFICATION_IDX_PRE_SHUTDOWN);
+
 #endif
 
 /*!

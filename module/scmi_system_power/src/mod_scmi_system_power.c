@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2015-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -215,7 +215,13 @@ static int scmi_sys_power_state_set_handler(fwk_id_t service_id,
         system_shutdown =
             system_state2system_shutdown[parameters->system_state];
         status = scmi_sys_power_ctx.pd_api->system_shutdown(system_shutdown);
-        if (status != FWK_SUCCESS)
+        if (status == FWK_PENDING) {
+            /*
+             * The request has been acknowledged but we don't respond back to
+             * the calling agent. This is a fire-and-forget situation.
+             */
+            return FWK_SUCCESS;
+        } else
             goto exit;
         break;
 

@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -28,6 +28,7 @@ static const struct fwk_element pl011_element_table[] = {
             .clock_id = FWK_ID_ELEMENT_INIT(
                             FWK_MODULE_IDX_CLOCK,
                             CLOCK_DEV_IDX_FCMCLK),
+            .pd_id = FWK_ID_NONE_INIT,
             }),
     },
     [1] = { 0 },

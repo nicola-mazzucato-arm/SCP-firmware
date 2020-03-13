@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -10,20 +10,11 @@
 #include <fwk_module_idx.h>
 #include <mod_juno_adc.h>
 #include <mod_sensor.h>
+#include <config_sensor.h>
 
 static const struct fwk_element adc_juno_element_table[] = {
-    [ADC_TYPE_CURRENT] = {
-        .name = "ADC Current",
-        .sub_element_count = ADC_DEV_TYPE_COUNT,
-        .data = &((struct mod_juno_adc_dev_config) {
-            .info = &((struct mod_sensor_info) {
-                .type = MOD_SENSOR_TYPE_AMPS,
-                .unit_multiplier = -3,
-            }),
-        }),
-    },
     [ADC_TYPE_VOLT] = {
-        .name = "ADC Voltage",
+        .name = "",
         .sub_element_count = ADC_DEV_TYPE_COUNT,
         .data = &((struct mod_juno_adc_dev_config) {
             .info = &((struct mod_sensor_info) {
@@ -32,8 +23,20 @@ static const struct fwk_element adc_juno_element_table[] = {
             }),
         }),
     },
+
+    #if USE_FULL_SET_SENSORS
+    [ADC_TYPE_CURRENT] = {
+        .name = "",
+        .sub_element_count = ADC_DEV_TYPE_COUNT,
+        .data = &((struct mod_juno_adc_dev_config) {
+            .info = &((struct mod_sensor_info) {
+                .type = MOD_SENSOR_TYPE_AMPS,
+                .unit_multiplier = -3,
+            }),
+        }),
+    },
     [ADC_TYPE_POWER] = {
-        .name = "ADC Power",
+        .name = "",
         .sub_element_count = ADC_DEV_TYPE_COUNT,
         .data = &((struct mod_juno_adc_dev_config) {
             .info = &((struct mod_sensor_info) {
@@ -43,7 +46,7 @@ static const struct fwk_element adc_juno_element_table[] = {
         }),
     },
     [ADC_TYPE_ENERGY] = {
-        .name = "ADC Energy",
+        .name = "",
         .sub_element_count = ADC_DEV_TYPE_COUNT,
         .data = &((struct mod_juno_adc_dev_config) {
             .info = &((struct mod_sensor_info) {
@@ -52,6 +55,8 @@ static const struct fwk_element adc_juno_element_table[] = {
             }),
         }),
     },
+    #endif
+
     [ADC_TYPE_COUNT] = { 0 },
 };
 

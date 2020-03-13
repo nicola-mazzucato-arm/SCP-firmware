@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -17,6 +17,7 @@
 
 #define CMN600_MAX_NUM_RNF    32
 #define CMN600_MAX_NUM_HNF    32
+#define CMN600_MAX_NUM_SCG    4
 
 #define SAM_GRANULARITY       (64 * FWK_MIB)
 
@@ -42,6 +43,12 @@ enum node_type {
     NODE_TYPE_CXRA      = 0x100,
     NODE_TYPE_CXHA      = 0x101,
     NODE_TYPE_CXLA      = 0x102,
+};
+
+enum device_type {
+    DEVICE_TYPE_CXHA    = 0x11, // 0b10001
+    DEVICE_TYPE_CXRA    = 0x12, // 0b10010
+    DEVICE_TYPE_CXRH    = 0x13, // 0b10011
 };
 
 /* Common node header */
@@ -87,6 +94,8 @@ struct cmn600_rnsam_reg {
     FWK_RW uint64_t SYS_CACHE_GRP_HN_COUNT;
     FWK_RW uint64_t SYS_CACHE_GRP_SN_NODEID[8];
     FWK_RW uint64_t SYS_CACHE_GRP_SN_SAM_CFG[2];
+           uint8_t  RESERVED5[0xF10 - 0xD58];
+    FWK_RW uint64_t SYS_CACHE_GRP_CAL_MODE;
 };
 
 /*
@@ -359,7 +368,8 @@ struct cmn600_cfgm_reg {
  */
 struct cmn600_mxp_reg {
     FWK_R  uint64_t NODE_INFO;
-           uint8_t  RESERVED0[0x80 - 0x8];
+    FWK_R  uint64_t PORT_CONNECT_INFO[2];
+           uint8_t  RESERVED0[0x80 - 0x18];
     FWK_R  uint64_t CHILD_INFO;
            uint8_t  RESERVED1[0x100 - 0x88];
     FWK_R  uint64_t CHILD_POINTER[16];
@@ -501,6 +511,10 @@ struct cmn600_hni_reg {
 #define CMN600_RNSAM_REGION_ENTRY_VALID UINT64_C(0x0000000000000001)
 #define CMN600_RNSAM_REGION_ENTRY_MASK UINT64_C(0xFFFFFFFF)
 #define CMN600_RNSAM_REGION_ENTRIES_PER_GROUP 2
+#define CMN600_RNSAM_MAX_HASH_MEM_REGION_ENTRIES 4
+#define CMN600_RNSAM_MAX_NON_HASH_MEM_REGION_ENTRIES 20
+#define CMN600_RNSAM_SCG_HNF_CAL_MODE_EN UINT64_C(0x01)
+#define CMN600_RNSAM_SCG_HNF_CAL_MODE_SHIFT 16
 
 #define CMN600_RNSAM_STATUS_UNSTALL UINT64_C(0x0000000000000002)
 
@@ -538,8 +552,22 @@ struct cmn600_hni_reg {
 #define CMN600_NODE_ID_PORT_MASK 0x1
 #define CMN600_NODE_ID_Y_POS 3
 
+#define CMN600_MXP_PORT_CONNECT_INFO_DEVICE_TYPE_MASK UINT64_C(0x1F)
+
 #define CMN600_ROOT_NODE_OFFSET_PORT_POS 14
 #define CMN600_ROOT_NODE_OFFSET_Y_POS 20
+
+/* Peripheral ID Revision Numbers */
+#define CMN600_PERIPH_ID_2_REV_R1_P0 ((0x00 << 4) + (0x0B))
+#define CMN600_PERIPH_ID_2_REV_R1_P1 ((0x01 << 4) + (0x0B))
+#define CMN600_PERIPH_ID_2_REV_R1_P2 ((0x02 << 4) + (0x0B))
+#define CMN600_PERIPH_ID_2_REV_R1_P3 ((0x03 << 4) + (0x0B))
+#define CMN600_PERIPH_ID_2_REV_R2_P0 ((0x04 << 4) + (0x0B))
+#define CMN600_PERIPH_ID_2_REV_R3_P0 ((0x05 << 4) + (0x0B))
+#define CMN600_PERIPH_ID_2_REV_R3_P1 ((0x06 << 4) + (0x0B))
+
+/* Peripheral ID Revision Numbers */
+#define CMN600_PERIPH_ID_2_MASK UINT64_C(0xFF)
 
 /*
  * Retrieve the number of child nodes of a given node
@@ -617,6 +645,15 @@ void *get_child_node(uintptr_t base, void *node_base, unsigned int child_index);
 unsigned int get_child_node_id(void *node_base, unsigned int child_index);
 
 /*
+ * Retrieve the revision number of CMN-600.
+ *
+ * \param root Pointer to the CMN-600 configuration master register.
+ *
+ * \return CMN-600 revision as integer value.
+ */
+unsigned int get_cmn600_revision(struct cmn600_cfgm_reg *root);
+
+/*
  * Verify if a child node (given a parent node base and child index) is an
  * external node from the CMN600 instance point of view.
  *
@@ -629,6 +666,27 @@ unsigned int get_child_node_id(void *node_base, unsigned int child_index);
  * \retval false if the node is internal
  */
 bool is_child_external(void *node_base, unsigned int child_index);
+
+/*
+ * Returns the port number from the child node id.
+ *
+ * \param child_node_id Child node id calculated from the child pointer.
+ *
+ * \retval port number (either 0 or 1).
+ */
+bool get_port_number(unsigned int child_node_id);
+
+/*
+ * Returns the device type from the MXP's port connect info register.
+ *
+ * \param mxp_base Pointer to the cross point node descriptor
+ *      \pre The cross point node pointer must be valid
+ * \param port Port number
+ *      \pre The port number should be either 0 or 1.
+ *
+ * \retval device type (por_mxp_por_mxp_device_port_connect_info_p[port] & 0x1F)
+ */
+unsigned int get_device_type(void *mxp_base, bool port);
 
 /*
  * Convert a memory region size into a size format used by the CMN600 registers
@@ -698,5 +756,15 @@ unsigned int get_node_pos_y(void *node_base);
  */
 struct cmn600_cfgm_reg *get_root_node(uintptr_t base, unsigned int hnd_node_id,
     unsigned int mesh_size_x, unsigned int mesh_size_y);
+
+/*
+ * Check if CMN600 supports CAL mode. CAL mode is supported from CMN600 r2p0.
+ *
+ * \param root Pointer to the root node descriptor
+ *
+ * \retval true if the CMN600 revision is found to be r2p0 or above
+ * \retval false if the CMN600 revision is found to be r1p3 or below
+ */
+bool is_cal_mode_supported(struct cmn600_cfgm_reg *root);
 
 #endif /* CMN600_H */

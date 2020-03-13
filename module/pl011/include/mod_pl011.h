@@ -1,7 +1,7 @@
 
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -42,6 +42,9 @@ struct mod_pl011_device_config {
 
     /*! Identifier of the clock that this device depends on */
     fwk_id_t clock_id;
+
+    /*! Identifier of the power domain that this device depends on */
+    fwk_id_t pd_id;
 };
 
 /*!

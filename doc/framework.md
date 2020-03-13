@@ -1,6 +1,6 @@
 # Framework Guide
 
-Copyright (c) 2011-2019, Arm Limited. All rights reserved.
+Copyright (c) 2011-2020, Arm Limited. All rights reserved.
 
 This guide covers the framework that is used to implement the SCP/MCP Software
 and which can also be used to extend the provided implementation. Each of the
@@ -85,7 +85,9 @@ If a dual-region memory configuration is used then *FIRMWARE_MEM1_BASE* and
 It is the responsibility of the firmware to define - in its Makefile - the
 architecture target for the image (using *BS_FIRMWARE_CPU*) and whether the
 firmware is multithreading-enabled (using *BS_FIRMWARE_HAS_MULTITHREADING*)
-and/or has notification support (using *BS_FIRMWARE_HAS_NOTIFICATION*).
+and/or has notification support (using *BS_FIRMWARE_HAS_NOTIFICATION*). The
+firmware can optionally define the count of notification subscriptions
+(using *BS_FIRMWARE_NOTIFICATION_COUNT*) to be supported.
 
 An example of a simple firmware directory which contains configuration files for
 two modules, the firmware.mk file, and the linker script.

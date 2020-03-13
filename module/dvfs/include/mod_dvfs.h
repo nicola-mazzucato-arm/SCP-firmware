@@ -1,6 +1,6 @@
 /*
  * Arm SCP/MCP Software
- * Copyright (c) 2017-2019, Arm Limited and Contributors. All rights reserved.
+ * Copyright (c) 2017-2020, Arm Limited and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
@@ -38,6 +38,7 @@ struct mod_dvfs_frequency_limits {
 struct mod_dvfs_opp {
     uint64_t voltage; /*!< Power supply voltage in millivolts (mV) */
     uint64_t frequency; /*!< Clock rate in Hertz (Hz) */
+    uint64_t power; /*!< Power draw in milliwatts (mW) */
 };
 
 /*!
@@ -66,6 +67,16 @@ struct mod_dvfs_domain_config {
      * \warning This identifier must refer to an element of the \c clock module.
      */
     fwk_id_t clock_id;
+
+    /*!
+     * \brief Alarm identifier.
+     *
+     * \warning This identifier must refer to an alarm of the \c timer module.
+     */
+    fwk_id_t alarm_id;
+
+    /*! Delay in milliseconds before retrying a request */
+    uint16_t retry_ms;
 
     /*! Worst-case transition latency in microseconds */
     uint16_t latency;
@@ -150,16 +161,6 @@ struct mod_dvfs_domain_api {
     int (*set_frequency)(fwk_id_t domain_id, uint64_t frequency);
 
     /*!
-     * \brief Set the frequency of a domain.
-     *
-     * \note This function is asynchronous.
-     *
-     * \param domain_id Element identifier of the domain.
-     * \param idx Index of the operating point to transition to.
-     */
-    int (*set_frequency_async)(fwk_id_t domain_id, uint64_t frequency);
-
-    /*!
      * \brief Get the frequency of a domain.
      *
      * \param domain_id Element identifier of the domain.
@@ -178,18 +179,6 @@ struct mod_dvfs_domain_api {
     int (*set_frequency_limits)(
         fwk_id_t domain_id,
         const struct mod_dvfs_frequency_limits *limits);
-
-    /*!
-     * \brief Set the frequency of a domain.
-     *
-     * \note This function is asynchronous.
-     *
-     * \param domain_id Element identifier of the domain.
-     * \param limits Pointer to the new limits.
-     */
-    int (*set_frequency_limits_async)(
-        fwk_id_t domain_id,
-        const struct mod_dvfs_frequency_limits *limits);
 };
 
 /*!
@@ -202,23 +191,19 @@ struct mod_dvfs_domain_api {
  */
 
 /*!
- * \brief <tt>Set operating point</tt> event response parameters.
+ * \brief <tt>Get current OPP </tt> event response parameters.
  */
-struct mod_dvfs_event_params_set_frequency_response {
-    int status; /*!< Status of the request */
-};
+struct mod_dvfs_params_response {
+    /*! Event response status */
+    int status;
 
-/*!
- * \brief <tt>Set limits</tt> event response parameters.
- */
-struct mod_dvfs_event_params_set_frequency_limits_response {
-    int status; /*!< Status of the request */
+    /*! Event response frequency */
+    uint64_t performance_level;
 };
 
 /*!
  * \}
  */
-
 /*!
  * \defgroup GroupDvfsIds Identifiers
  * \{
@@ -240,25 +225,18 @@ static const fwk_id_t mod_dvfs_api_id_dvfs =
  * \brief Event indices.
  */
 enum mod_dvfs_event_idx {
-    /*! Event index for mod_dvfs_event_id_set_frequency() */
-    MOD_DVFS_EVENT_IDX_SET_FREQUENCY,
-
-    /*! Event index for mod_dvfs_event_id_set_frequency_limits() */
-    MOD_DVFS_EVENT_IDX_SET_FREQUENCY_LIMITS,
-
-    /*! Number of defined events */
-    MOD_DVFS_EVENT_IDX_COUNT
+    MOD_DVFS_EVENT_IDX_SET,     /*!< Set level/limits */
+    MOD_DVFS_EVENT_IDX_GET_OPP, /*!< Get frequency */
+    MOD_DVFS_EVENT_IDX_COUNT,   /*!< event count */
 };
 
-/*! <tt>Set operating point</tt> event identifier */
-static const fwk_id_t mod_dvfs_event_id_set_frequency =
-    FWK_ID_EVENT_INIT(FWK_MODULE_IDX_DVFS, MOD_DVFS_EVENT_IDX_SET_FREQUENCY);
+/*! <tt>Set operating point/limits</tt> event identifier */
+static const fwk_id_t mod_dvfs_event_id_set =
+    FWK_ID_EVENT_INIT(FWK_MODULE_IDX_DVFS, MOD_DVFS_EVENT_IDX_SET);
 
-/*! <tt>Set frequency limits</tt> event identifier */
-static const fwk_id_t mod_dvfs_event_id_set_frequency_limits =
-    FWK_ID_EVENT_INIT(
-        FWK_MODULE_IDX_DVFS,
-        MOD_DVFS_EVENT_IDX_SET_FREQUENCY_LIMITS);
+/*! <tt>Get current OPP </tt> event identifier */
+static const fwk_id_t mod_dvfs_event_id_get_opp =
+    FWK_ID_EVENT_INIT(FWK_MODULE_IDX_DVFS, MOD_DVFS_EVENT_IDX_GET_OPP);
 
 /*!
  * \}
