@@ -21,8 +21,24 @@ ifeq ($(BUILD_HAS_NOTIFICATION),yes)
     DEFINES += BUILD_HAS_NOTIFICATION
 endif
 
-ifdef BUILD_NOTIFICATION_COUNT
-    DEFINES += NOTIFICATION_COUNT=$(BUILD_NOTIFICATION_COUNT)
+ifeq ($(BUILD_HAS_SCMI_NOTIFICATIONS),yes)
+    DEFINES += BUILD_HAS_SCMI_NOTIFICATIONS
+endif
+
+ifeq ($(BUILD_HAS_FAST_CHANNELS),yes)
+    DEFINES += BUILD_HAS_FAST_CHANNELS
+endif
+
+ifeq ($(BUILD_HAS_SCMI_RESET),yes)
+    DEFINES += BUILD_HAS_SCMI_RESET
+endif
+
+ifeq ($(BUILD_HAS_STATISTICS),yes)
+    DEFINES += BUILD_HAS_STATISTICS
+endif
+
+ifeq ($(BUILD_HAS_RESOURCE_PERMISSIONS),yes)
+    DEFINES += BUILD_HAS_RESOURCE_PERMISSIONS
 endif
 
 export AS := $(CC)
@@ -44,16 +60,7 @@ endif
 # GCC-specific optimization levels for debug and release modes
 #
 
-ifeq ($(PRODUCT)-$(FIRMWARE),juno-scp_ramfw)
-    # Enable link-time optimization
-    CFLAGS_GCC += -flto
-    LDFLAGS_GCC += -Wl,-flto
-
-    DEFAULT_OPT_GCC_DEBUG := s
-else
-    DEFAULT_OPT_GCC_DEBUG := g
-endif
-
+DEFAULT_OPT_GCC_DEBUG := g
 DEFAULT_OPT_GCC_RELEASE := 2
 
 #
@@ -82,12 +89,12 @@ else
     LDFLAGS_GCC += -mcpu=$(BS_ARCH_CPU)
     LDFLAGS_ARM += -mcpu=$(BS_ARCH_CPU)
 
-    # Optional ISA ("sub-arch") parameter
-    ifneq ($(BS_ARCH_ISA),)
-        CFLAGS  += -m$(BS_ARCH_ISA)
-        ASFLAGS_GCC += -m$(BS_ARCH_ISA)
-        LDFLAGS_GCC += -m$(BS_ARCH_ISA)
-        LDFLAGS_ARM += -m$(BS_ARCH_ISA)
+    # Optional architectural mode parameter
+    ifneq ($(BS_ARCH_MODE),)
+        CFLAGS  += -m$(BS_ARCH_MODE)
+        ASFLAGS_GCC += -m$(BS_ARCH_MODE)
+        LDFLAGS_GCC += -m$(BS_ARCH_MODE)
+        LDFLAGS_ARM += -m$(BS_ARCH_MODE)
     endif
 endif
 
@@ -102,21 +109,14 @@ endif
 CFLAGS += -Werror
 CFLAGS += -Wall
 CFLAGS += -Wextra
-CFLAGS += -pedantic
-CFLAGS += -pedantic-errors
 
+CFLAGS += -Wno-error=deprecated-declarations
 CFLAGS += -Wno-unused-parameter
 
 # GCC is not currently consistent in how it applies this warning, but this flag
 # should be removed should we move to a version that can build the firmware
 # without it.
 CFLAGS += -Wno-missing-field-initializers
-
-# Clang picks up a number of situations that GCC does not with this warning
-# enabled. Most of them do not have easy fixes, and are valid C, so this flag
-# should remain unless we move to a version of Clang/Arm Compiler that does not
-# warn about the situations that have not already been fixed.
-CFLAGS_CLANG += -Wno-missing-braces
 
 # Place functions and data into their own sections. This allows the linker to
 # strip out functions with no references.
@@ -128,10 +128,12 @@ LDFLAGS_ARM += -Wl,--remove
 CFLAGS_CLANG += -Wno-dollar-in-identifier-extension
 
 CFLAGS += -g
-CFLAGS += -std=c11
+CFLAGS += -std=gnu11
 CFLAGS_CLANG += -fshort-enums # Required by RTX
 
 CFLAGS += -fno-exceptions
+
+CPPFLAGS += -x c -E -P
 
 DEP_CFLAGS_GCC = -MD -MP
 
@@ -143,22 +145,37 @@ ARFLAGS_GCC = -rc
 
 LDFLAGS_GCC += -Wl,--cref
 
-LDFLAGS_GCC += -Wl,--undefined=arm_exceptions
-LDFLAGS_ARM += -Wl,--undefined=arm_exceptions
+LDFLAGS_GCC += -Wl,--undefined=arch_exceptions
+LDFLAGS_ARM += -Wl,--undefined=arch_exceptions
 
 BUILTIN_LIBS_GCC := -lc -lgcc
 
 ifeq ($(MODE),release)
     O ?= $(DEFAULT_OPT_GCC_RELEASE)
+    LOG_LEVEL ?= $(DEFAULT_LOG_LEVEL_RELEASE)
 
     # Disable assertions in release mode
     DEFINES += NDEBUG
-
 else
     O ?= $(DEFAULT_OPT_GCC_DEBUG)
+    LOG_LEVEL ?= $(DEFAULT_LOG_LEVEL_DEBUG)
 
     DEFINES += BUILD_MODE_DEBUG
 endif
+
+DEFINES += FWK_LOG_LEVEL=FWK_LOG_LEVEL_$(LOG_LEVEL)
+
+ifeq ($(BUILD_HAS_DEBUGGER),yes)
+    DEFINES += BUILD_HAS_DEBUGGER
+endif
+
+#
+# Always include the architecture librarie
+#
+
+INCLUDES += $(ARCH_DIR)/include
+INCLUDES += $(ARCH_DIR)/$(BS_ARCH_VENDOR)/include
+INCLUDES += $(ARCH_DIR)/$(BS_ARCH_VENDOR)/$(BS_ARCH_ARCH)/include
 
 #
 # Always include the framework library
@@ -240,7 +257,7 @@ $(OBJ_DIR)/%.o: %.S | $$(@D)/
 	$(call show-action,AS,$<)
 	$(AS) -c $(CFLAGS) $(DEP_CFLAGS) $< -o $@
 
-$(BUILD_PATH)/%/:
+$(BUILD_PATH)%/:
 	$(call show-action,MD,$@)
 	$(MD) $@
 

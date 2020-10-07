@@ -5,47 +5,50 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
-#include <string.h>
-
-#include <fwk_assert.h>
-
-#include <synquacer_debug.h>
-#include <synquacer_mmap.h>
+#include "synquacer_mmap.h"
 
 #include <ddr_init.h>
 
-struct fip_toc_header_s {
+#include <fwk_assert.h>
+#include <fwk_attributes.h>
+#include <fwk_log.h>
+#include <fwk_macros.h>
+
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
+
+struct FWK_PACKED fip_toc_header_s {
     uint32_t name;
     uint32_t serial_num;
     uint64_t flags;
-} __attribute__((packed));
+};
 
 typedef struct fip_toc_header_s fip_toc_header_t;
 /* fip toc header 16 byte*/
 
-struct fip_toc_entry_s {
+struct FWK_PACKED fip_toc_entry_s {
     uint8_t uuid[16];
     uint64_t offset_addr;
     uint64_t size;
     uint64_t flags;
-} __attribute__((packed));
+};
 
 typedef struct fip_toc_entry_s fip_toc_entry_t;
 /* fip toc entry 40 byte*/
 
-struct fip_package_s {
+struct FWK_PACKED fip_package_s {
     fip_toc_header_t fip_toc_header;
     fip_toc_entry_t fip_toc_entry[5];
     uint32_t data[1];
-} __attribute__((packed));
+};
 
 typedef struct fip_package_s fip_package_t;
 
-struct arm_tf_fip_package_s {
+struct FWK_PACKED arm_tf_fip_package_s {
     fip_toc_header_t fip_toc_header;
     fip_toc_entry_t fip_toc_entry[4];
-} __attribute__((packed));
+};
 
 typedef struct arm_tf_fip_package_s arm_tf_fip_package_t;
 
@@ -79,11 +82,11 @@ static void fw_fip_load_bl32(void)
             (void *)bl32_uuid,
             (void *)fip_package_p->fip_toc_entry[BL32_TOC_ENTRY_INDEX].uuid,
             sizeof(bl32_uuid)) != 0) {
-        SYNQUACER_DEV_LOG_ERROR("[FIP] BL32 UUID is wrong, skip loading\n");
+        FWK_LOG_ERR("[FIP] BL32 UUID is wrong, skip loading");
         return;
     }
 
-    SYNQUACER_DEV_LOG_ERROR("[FIP] load BL32\n");
+    FWK_LOG_ERR("[FIP] load BL32");
 
     /* enable DRAM access by configuring address trans register */
     trans_addr_39_20 =
@@ -102,7 +105,7 @@ static void fw_fip_load_bl32(void)
     *((volatile uint32_t *)(REG_ASH_SCP_POW_CTL + ADDR_TRANS_OFFSET)) =
         trans_addr_39_20;
 
-    SYNQUACER_DEV_LOG_ERROR("[FIP] BL32 is loaded\n");
+    FWK_LOG_ERR("[FIP] BL32 is loaded");
 }
 
 void fw_fip_load_arm_tf(void)
@@ -125,21 +128,23 @@ void fw_fip_load_arm_tf(void)
         "sizeof(arm_tf_fip_package_t) is wrong");
 
     for (i = 0; i < FWK_ARRAY_SIZE(arm_tf_dst_addr); i++) {
-        SYNQUACER_DEV_LOG_DEBUG(
-            "[FIP] fip_toc_entry[%d] offset_addr %lx\n",
+        FWK_LOG_INFO(
+            "[FIP] fip_toc_entry[%" PRIu32 "] offset_addr %" PRIx64,
             i,
             fip_package_p->fip_toc_entry[i].offset_addr);
 
-        SYNQUACER_DEV_LOG_DEBUG(
-            "[FIP] fip_toc_entry[%d] size        %lu\n",
+        FWK_LOG_INFO(
+            "[FIP] fip_toc_entry[%" PRIu32 "] size        %" PRIu64,
             i,
             fip_package_p->fip_toc_entry[i].size);
 
-        SYNQUACER_DEV_LOG_DEBUG(
-            "[FIP] dst addr[%d]                  %x\n", i, arm_tf_dst_addr[i]);
+        FWK_LOG_INFO(
+            "[FIP] dst addr[%" PRIu32 "]                  %" PRIx32,
+            i,
+            arm_tf_dst_addr[i]);
 
-        SYNQUACER_DEV_LOG_DEBUG(
-            "[FIP] src addr[%d]                  %x\n",
+        FWK_LOG_INFO(
+            "[FIP] src addr[%" PRIu32 "]                  %" PRIx32,
             i,
             ((uint32_t)fip_package_p +
              (uint32_t)fip_package_p->fip_toc_entry[i].offset_addr));

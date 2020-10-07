@@ -16,7 +16,6 @@ BS_FIRMWARE_MODULE_HEADERS_ONLY :=
 BS_FIRMWARE_MODULES := \
     armv7m_mpu \
     pl011 \
-    log \
     cmn600 \
     apcontext \
     power_domain \
@@ -44,7 +43,7 @@ BS_FIRMWARE_MODULES := \
     scmi_system_power \
     scmi_management \
     scmi_ccix_config \
-    n1sdp_flash \
+    fip \
     n1sdp_timer_sync \
     n1sdp_c2c \
     n1sdp_remote_pd \
@@ -60,7 +59,6 @@ BS_FIRMWARE_SOURCES := \
     config_armv7m_mpu.c \
     config_ssc.c \
     config_system_info.c \
-    config_log.c \
     config_power_domain.c \
     config_ppu_v0.c \
     config_ppu_v1.c \
@@ -78,13 +76,20 @@ BS_FIRMWARE_SOURCES := \
     config_pik_clock.c \
     config_css_clock.c \
     config_clock.c \
-    config_n1sdp_flash.c \
+    config_fip.c \
     config_n1sdp_pcie.c \
     config_n1sdp_scp2pcc.c \
     config_sensor.c \
     config_apcontext.c \
     config_n1sdp_c2c_i2c.c \
     config_n1sdp_remote_pd.c \
-    config_n1sdp_timer_sync.c
+    config_n1sdp_timer_sync.c \
+    config_scmi_power_domain.c \
+    config_pl011.c
+
+ifeq ($(BUILD_HAS_DEBUGGER),yes)
+    BS_FIRMWARE_MODULES += debugger_cli
+    BS_FIRMWARE_SOURCES += config_debugger_cli.c
+endif
 
 include $(BS_DIR)/firmware.mk

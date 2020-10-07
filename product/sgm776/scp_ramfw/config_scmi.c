@@ -5,19 +5,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "sgm776_scmi.h"
+
+#include <mod_scmi.h>
+#include <mod_smt.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <sgm776_scmi.h>
-#include <mod_scmi.h>
-#include <internal/scmi.h>
-#include <mod_smt.h>
 
 static const struct fwk_element service_table[] = {
     [SGM776_SCMI_SERVICE_IDX_PSCI] = {
-        .name = "SERVICE0",
+        .name = "PSCI",
         .data = &((struct mod_scmi_service_config) {
             .transport_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_SMT,
                                                 SGM776_SCMI_SERVICE_IDX_PSCI),
@@ -27,10 +28,11 @@ static const struct fwk_element service_table[] = {
                 FWK_ID_NOTIFICATION_INIT(FWK_MODULE_IDX_SMT,
                     MOD_SMT_NOTIFICATION_IDX_INITIALIZED),
             .scmi_agent_id = SCMI_AGENT_ID_PSCI,
+            .scmi_p2a_id = FWK_ID_NONE_INIT,
         }),
     },
     [SGM776_SCMI_SERVICE_IDX_OSPM_0] = {
-        .name = "SERVICE1",
+        .name = "OSPM-0",
         .data = &((struct mod_scmi_service_config) {
             .transport_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_SMT,
                                                 SGM776_SCMI_SERVICE_IDX_OSPM_0),
@@ -40,10 +42,11 @@ static const struct fwk_element service_table[] = {
                 FWK_ID_NOTIFICATION_INIT(FWK_MODULE_IDX_SMT,
                     MOD_SMT_NOTIFICATION_IDX_INITIALIZED),
             .scmi_agent_id = SCMI_AGENT_ID_OSPM,
+            .scmi_p2a_id = FWK_ID_NONE_INIT,
         }),
     },
     [SGM776_SCMI_SERVICE_IDX_OSPM_1] = {
-        .name = "SERVICE2",
+        .name = "OSPM-1",
         .data = &((struct mod_scmi_service_config) {
             .transport_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_SMT,
                                                 SGM776_SCMI_SERVICE_IDX_OSPM_1),
@@ -53,6 +56,7 @@ static const struct fwk_element service_table[] = {
                 FWK_ID_NOTIFICATION_INIT(FWK_MODULE_IDX_SMT,
                     MOD_SMT_NOTIFICATION_IDX_INITIALIZED),
             .scmi_agent_id = SCMI_AGENT_ID_OSPM,
+            .scmi_p2a_id = FWK_ID_NONE_INIT,
         }),
     },
     [SGM776_SCMI_SERVICE_IDX_COUNT] = { 0 }
@@ -75,12 +79,14 @@ static const struct mod_scmi_agent agent_table[] = {
 };
 
 struct fwk_module_config config_scmi = {
-    .get_element_table = get_service_table,
-    .data = &((struct mod_scmi_config) {
-        .protocol_count_max = 9,
-        .agent_count = FWK_ARRAY_SIZE(agent_table) - 1,
-        .agent_table = agent_table,
-        .vendor_identifier = "arm",
-        .sub_vendor_identifier = "arm",
-    }),
+    .data =
+        &(struct mod_scmi_config){
+            .protocol_count_max = 9,
+            .agent_count = FWK_ARRAY_SIZE(agent_table) - 1,
+            .agent_table = agent_table,
+            .vendor_identifier = "arm",
+            .sub_vendor_identifier = "arm",
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_service_table),
 };

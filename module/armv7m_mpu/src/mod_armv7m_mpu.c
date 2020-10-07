@@ -6,9 +6,13 @@
  */
 
 #include <mod_armv7m_mpu.h>
+
 #include <fwk_assert.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
+#include <fwk_status.h>
+
+#include <fmw_cmsis.h>
 
 static int armv7m_mpu_init(
     fwk_id_t module_id,
@@ -17,8 +21,8 @@ static int armv7m_mpu_init(
 {
     const struct mod_armv7m_mpu_config *config;
 
-    assert(element_count == 0);
-    assert(data != NULL);
+    fwk_assert(element_count == 0);
+    fwk_assert(data != NULL);
 
     config = data;
 

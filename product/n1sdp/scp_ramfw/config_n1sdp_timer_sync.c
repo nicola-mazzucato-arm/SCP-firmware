@@ -5,14 +5,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "n1sdp_scp_mmap.h"
+
+#include <mod_n1sdp_timer_sync.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
-#include <mod_n1sdp_timer_sync.h>
-#include <n1sdp_scp_irq.h>
-#include <n1sdp_scp_mhu.h>
-#include <n1sdp_scp_mmap.h>
+
+#include <fmw_cmsis.h>
 
 static const struct fwk_element n1sdp_tsync_element_table[] = {
     [0] = {
@@ -39,5 +41,5 @@ static const struct fwk_element *n1sdp_tsync_get_element_table(
 }
 
 struct fwk_module_config config_n1sdp_timer_sync = {
-    .get_element_table = n1sdp_tsync_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(n1sdp_tsync_get_element_table),
 };

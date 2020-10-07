@@ -8,29 +8,36 @@
  *     RD-Daniel System Support.
  */
 
-#include <stdint.h>
-#include <fmw_cmsis.h>
+#include "clock_soc.h"
+#include "rddaniel_core.h"
+#include "rddaniel_scmi.h"
+#include "rddaniel_sds.h"
+#include "scp_css_mmap.h"
+#include "scp_pik.h"
+
+#include <mod_clock.h>
+#include <mod_power_domain.h>
+#include <mod_ppu_v1.h>
+#include <mod_rddaniel_system.h>
+#include <mod_scmi.h>
+#include <mod_sds.h>
+#include <mod_system_power.h>
+
 #include <fwk_assert.h>
+#include <fwk_event.h>
 #include <fwk_id.h>
 #include <fwk_interrupt.h>
+#include <fwk_log.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_notification.h>
-#include <mod_clock.h>
-#include <mod_rddaniel_system.h>
-#include <mod_log.h>
-#include <mod_scmi.h>
-#include <mod_sds.h>
-#include <mod_system_power.h>
-#include <mod_power_domain.h>
-#include <mod_ppu_v1.h>
-#include <clock_soc.h>
-#include <rddaniel_core.h>
-#include <rddaniel_sds.h>
-#include <rddaniel_scmi.h>
-#include <scp_rddaniel_irq.h>
-#include <scp_pik.h>
+#include <fwk_status.h>
+
+#include <fmw_cmsis.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /* SCMI services required to enable the messaging stack */
 static unsigned int scmi_notification_table[] = {
@@ -41,9 +48,6 @@ static unsigned int scmi_notification_table[] = {
 struct rddaniel_system_ctx {
     /* Pointer to the SCP PIK registers */
     struct pik_scp_reg *pik_scp_reg;
-
-    /* Log API pointer */
-    const struct mod_log_api *log_api;
 
     /* Pointer to the Interrupt Service Routine API of the PPU_V1 module */
     const struct ppu_v1_isr_api *ppu_v1_isr_api;
@@ -211,11 +215,6 @@ static int rddaniel_system_bind(fwk_id_t id, unsigned int round)
     if (round > 0)
         return FWK_SUCCESS;
 
-    status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-        FWK_ID_API(FWK_MODULE_IDX_LOG, 0), &rddaniel_system_ctx.log_api);
-    if (status != FWK_SUCCESS)
-        return status;
-
     status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_POWER_DOMAIN),
         FWK_ID_API(FWK_MODULE_IDX_POWER_DOMAIN, MOD_PD_API_IDX_RESTRICTED),
         &rddaniel_system_ctx.mod_pd_restricted_api);
@@ -252,8 +251,7 @@ static int rddaniel_system_start(fwk_id_t id)
     if (status != FWK_SUCCESS)
         return status;
 
-    rddaniel_system_ctx.log_api->log(MOD_LOG_GROUP_DEBUG,
-        "[RD-DANIEL SYSTEM] Requesting SYSTOP initialization...\n");
+    FWK_LOG_INFO("[RD-DANIEL SYSTEM] Requesting SYSTOP initialization...");
 
     /*
      * Subscribe to these SCMI channels in order to know when they have all
@@ -282,11 +280,15 @@ static int rddaniel_system_start(fwk_id_t id)
     if (status != FWK_SUCCESS)
         return status;
 
-    return
-        rddaniel_system_ctx.mod_pd_restricted_api->set_composite_state_async(
-            FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, 0), false,
-            MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2, 0, MOD_PD_STATE_ON,
-                                   MOD_PD_STATE_OFF, MOD_PD_STATE_OFF));
+    return rddaniel_system_ctx.mod_pd_restricted_api->set_state_async(
+        FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, 0),
+        false,
+        MOD_PD_COMPOSITE_STATE(
+            MOD_PD_LEVEL_2,
+            0,
+            MOD_PD_STATE_ON,
+            MOD_PD_STATE_OFF,
+            MOD_PD_STATE_OFF));
 }
 
 int rddaniel_system_process_notification(const struct fwk_event *event,
@@ -298,7 +300,7 @@ int rddaniel_system_process_notification(const struct fwk_event *event,
     static unsigned int scmi_notification_count = 0;
     static bool sds_notification_received = false;
 
-    assert(fwk_id_is_type(event->target_id, FWK_ID_TYPE_MODULE));
+    fwk_assert(fwk_id_is_type(event->target_id, FWK_ID_TYPE_MODULE));
 
     if (fwk_id_is_equal(event->id, mod_clock_notification_id_state_changed)) {
         params = (struct clock_notification_params *)event->params;
@@ -308,16 +310,19 @@ int rddaniel_system_process_notification(const struct fwk_event *event,
          * time only
          */
         if (params->new_state == MOD_CLOCK_STATE_RUNNING) {
-            rddaniel_system_ctx.log_api->log(MOD_LOG_GROUP_DEBUG,
-                "[RD-DANIEL SYSTEM] Initializing the primary core...\n");
+            FWK_LOG_INFO("[RD-DANIEL SYSTEM] Initializing the primary core...");
 
             mod_pd_restricted_api = rddaniel_system_ctx.mod_pd_restricted_api;
 
-            status =  mod_pd_restricted_api->set_composite_state_async(
+            status = mod_pd_restricted_api->set_state_async(
                 FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, 0),
                 false,
-                MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2, 0, MOD_PD_STATE_ON,
-                    MOD_PD_STATE_ON, MOD_PD_STATE_ON));
+                MOD_PD_COMPOSITE_STATE(
+                    MOD_PD_LEVEL_2,
+                    0,
+                    MOD_PD_STATE_ON,
+                    MOD_PD_STATE_ON,
+                    MOD_PD_STATE_ON));
             if (status != FWK_SUCCESS)
                 return status;
 

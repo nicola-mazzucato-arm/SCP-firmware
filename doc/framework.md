@@ -47,7 +47,7 @@ used for product-specific definitions.
 The directory structure of a project can be seen below, note that there is one
 directory per product under the product directory.
 
-\code
+```
 root/
     product/
         productname/
@@ -57,7 +57,7 @@ root/
             firmware_a/
             firmware_b/
             product.mk
-\endcode
+```
 
 ### Firmware
 
@@ -66,39 +66,37 @@ represents a software image that is built as part of a product. Each firmware
 lists the modules that will be built into its image and provides configuration
 data for each of these modules.
 
-For each firmware, linker information must be provided in a *fmw_memory.ld.S*
-file:
+For each firmware, linker information must be provided in a *fmw_memory.h* file:
 
-- FIRMWARE_MEM_MODE: The desired memory region configuration. Can be one of the
-    following:
-    - FWK_MEM_MODE_SINGLE_REGION
-    - FWK_MEM_MODE_DUAL_REGION_RELOCATION
-    - FWK_MEM_MODE_DUAL_REGION_NO_RELOCATION
-- FIRMWARE_MEM0_BASE: The base address of the MEM0 region, which is always
-    used regardless of the memory region configuration given by
-    *FIRMWARE_MEM_MODE*.
-- FIRMWARE_MEM0_SIZE: The size of the MEM0 region in bytes.
+- FMW_MEM_MODE: The desired memory region configuration. Can be one of the
+  following:
+    - ARCH_MEM_MODE_SINGLE_REGION
+    - ARCH_MEM_MODE_DUAL_REGION_RELOCATION
+    - ARCH_MEM_MODE_DUAL_REGION_NO_RELOCATION
+- FMW_MEM0_BASE: The base address of the MEM0 region, which is always
+  used regardless of the memory region configuration given by *FMW_MEM_MODE*.
+- FMW_MEM0_SIZE: The size of the MEM0 region in bytes.
+- FMW_STACK_SIZE (if multithreading enabled): The size of each individual
+    thread stack in bytes.
 
-If a dual-region memory configuration is used then *FIRMWARE_MEM1_BASE* and
-*FIRMWARE_MEM1_SIZE* must also be defined.
+If a dual-region memory configuration is used then *FMW_MEM1_BASE* and
+*FMW_MEM1_SIZE* must also be defined.
 
 It is the responsibility of the firmware to define - in its Makefile - the
 architecture target for the image (using *BS_FIRMWARE_CPU*) and whether the
 firmware is multithreading-enabled (using *BS_FIRMWARE_HAS_MULTITHREADING*)
-and/or has notification support (using *BS_FIRMWARE_HAS_NOTIFICATION*). The
-firmware can optionally define the count of notification subscriptions
-(using *BS_FIRMWARE_NOTIFICATION_COUNT*) to be supported.
+and/or has notification support (using *BS_FIRMWARE_HAS_NOTIFICATION*).
 
 An example of a simple firmware directory which contains configuration files for
 two modules, the firmware.mk file, and the linker script.
 
-\code
+```
 firmware_root/
     config_module_a.c
     config_module_b.c
     firmware.mk
-    fmw_memory.ld.s
-\endcode
+    fmw_memory.h
+```
 
 ### Modules
 
@@ -151,7 +149,7 @@ provides an API it implements the *process_bind_request* function of the
 framework's module interface so that other modules can bind to it. It does not
 generate any events nor any notifications.
 
-\code
+```
 const struct fwk_module mod_modulename = {
     .name = "Example Module",
     .type = FWK_MODULE_TYPE_SERVICE,
@@ -163,7 +161,7 @@ const struct fwk_module mod_modulename = {
     .bind = modulename_bind,
     .process_bind_request = modulename_process_bind_request,
 };
-\endcode
+```
 
 #### Module Configuration
 
@@ -174,12 +172,12 @@ within the firmware that the module will be built into.
 
 The declaration for the *fwk_module_config* structure is given below:
 
-\code
+```
 struct fwk_module_config {
     const struct fwk_element *(*get_element_table)(fwk_id_t module_id);
     const void *data;
 };
-\endcode
+```
 
 The framework uses the *get_element_table* function pointer to access the table
 of elements that the product has provided for the module. If the pointer is
@@ -215,13 +213,13 @@ number of sub-elements associated with the element, and a void pointer to data
 that is in a module-defined format. The declaration for the *fwk_element*
 structure is given below:
 
-\code
+```
 struct fwk_element {
     const char *name;
     size_t sub_element_count;
     const void *data;
 };
-\endcode
+```
 
 ### Sub-elements
 
@@ -309,30 +307,30 @@ well-defined. For example, the module may provide an enumeration in its public
 header that lists the APIs it offers, giving the API indices in a structured
 way:
 
-\code
+```
 enum mod_modulename_api {
     MOD_MODULENAME_API_A,
     MOD_MODULENAME_API_B,
 };
-\endcode
+```
 
 Alternatively, the module may define these values individually:
 
-\code
+```
 #define MOD_MODULENAME_API_IDX_A    0
 #define MOD_MODULENAME_API_IDX_B    1
-\endcode
+```
 
 Finally, the module may offer its API identifiers directly using the appropriate
 macros to construct the identifiers itself. This approach has the benefit that
 modules using the API do not need to create the API identifiers themselves.
 
-\code
+```
 static const fwk_id_t mod_modulename_api_id_a = FWK_ID_API_INIT(
     FWK_MODULE_IDX_MODULENAME, MOD_MODULENAME_API_IDX_A);
 static const fwk_id_t mod_modulename_api_id_b = FWK_ID_API_INIT(
     FWK_MODULE_IDX_MODULENAME, MOD_MODULENAME_API_IDX_B);
-\endcode
+```
 
 ### Events
 
@@ -525,11 +523,11 @@ on a small set of functions to do platform-specific work like flushing the
 buffer and outputting characters. These functions make up the log driver
 interface and are forward declared in fwk_log.h:
 
-\code
+```
 int fwk_log_driver_init(void);
 int fwk_log_driver_putchar(char c);
 int fwk_log_driver_flush(void);
-\endcode
+```
 
 The framework only implements weakly-linked "stub" versions of these functions
 that simply return an error code. It is expected that platform-specific code (a
@@ -543,15 +541,15 @@ configuration data in the initialization stage of the framework. To allow the
 passing of configuration data to this module, the log component in the framework
 externally declares a pointer to configuration data: (fwk_log.h)
 
-\code
+```
 extern void *fwk_log_driver_config;
-\endcode
+```
 
 It is expected that the firmware-specific module configuration code for the
 driver module (config_mod_xxx.c) will concretely declare this variable and
 initialize it to point to some configuration structure:
 
-\code
+```
 struct mod_xxx_fwk_log_config cfg = {
     .x = 1,
     .y = 2,
@@ -559,7 +557,7 @@ struct mod_xxx_fwk_log_config cfg = {
 };
 
 void *fwk_log_driver_config = &cfg;
-\endcode
+```
 
 The driver module can then access its log framework related configuration data
 at any time. It is expected that the driver module performs initialization using

@@ -11,13 +11,13 @@
 #ifndef INTERNAL_CMN600_CTX_H
 #define INTERNAL_CMN600_CTX_H
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <mod_cmn600.h>
-#include <mod_log.h>
-#include <mod_timer.h>
 #include <cmn600.h>
 
+#include <mod_cmn600.h>
+#include <mod_timer.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /* External nodes that require RN-SAM mapping during run-time */
 struct external_rnsam_tuple {
@@ -88,8 +88,6 @@ struct cmn600_ctx {
 
     /* CCIX host parameters to be sent to upper level firmware */
     struct mod_cmn600_ccix_host_node_config ccix_host_info;
-
-    struct mod_log_api *log_api;
 
     /* Timer module API */
     struct mod_timer_api *timer_api;

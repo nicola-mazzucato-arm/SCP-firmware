@@ -6,15 +6,15 @@
 #
 
 BS_FIRMWARE_CPU := cortex-m3
-BS_FIRMWARE_HAS_MULTITHREADING := yes
+BS_FIRMWARE_HAS_MULTITHREADING := no
 BS_FIRMWARE_HAS_NOTIFICATION := yes
+BS_FIRMWARE_HAS_RESOURCE_PERMISSIONS := yes
 
 BS_FIRMWARE_MODULES := \
     sid \
     system_info \
     pcid \
     pl011 \
-    log \
     gtimer \
     timer \
     ddr_phy500 \
@@ -43,9 +43,12 @@ BS_FIRMWARE_MODULES := \
     scmi_apcore \
     sds
 
+ifeq ($(BS_FIRMWARE_HAS_RESOURCE_PERMISSIONS),yes)
+    BS_FIRMWARE_MODULES += resource_perms
+endif
+
 BS_FIRMWARE_SOURCES := \
-    rtx_config.c \
-    config_log.c \
+    config_pl011.c \
     config_timer.c \
     config_ddr_phy500.c \
     config_dmc500.c \
@@ -70,6 +73,14 @@ BS_FIRMWARE_SOURCES := \
     config_mock_psu.c \
     config_dvfs.c \
     config_sid.c \
-    config_system_info.c
+    config_system_info.c \
+    config_scmi_power_domain.c
 
+ifeq ($(BS_FIRMWARE_HAS_MULTITHREADING),yes)
+    BS_FIRMWARE_SOURCES += rtx_config.c
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_RESOURCE_PERMISSIONS),yes)
+    BS_FIRMWARE_SOURCES += config_resource_perms.c
+endif
 include $(BS_DIR)/firmware.mk

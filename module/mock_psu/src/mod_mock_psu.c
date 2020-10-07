@@ -8,12 +8,14 @@
 #include <mod_mock_psu.h>
 #include <mod_psu.h>
 #include <mod_timer.h>
+
 #include <fwk_assert.h>
 #include <fwk_id.h>
-#include <fwk_macros.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
+#include <fwk_status.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -32,7 +34,7 @@ struct mod_mock_psu_operation {
 
     union {
         bool enabled;
-        uint64_t voltage;
+        uint32_t voltage;
     };
 };
 
@@ -40,7 +42,7 @@ static struct mod_mock_psu_ctx {
     struct mod_mock_psu_element_ctx {
         struct {
             bool enabled;
-            uint64_t voltage;
+            uint32_t voltage;
         } state;
 
         struct mod_mock_psu_operation op;
@@ -225,9 +227,7 @@ exit:
     return status;
 }
 
-static int mod_mock_psu_get_voltage(
-    fwk_id_t element_id,
-    uint64_t *voltage)
+static int mod_mock_psu_get_voltage(fwk_id_t element_id, uint32_t *voltage)
 {
     int status;
 
@@ -257,9 +257,7 @@ exit:
     return status;
 }
 
-static int mod_mock_psu_set_voltage(
-    fwk_id_t element_id,
-    uint64_t voltage)
+static int mod_mock_psu_set_voltage(fwk_id_t element_id, uint32_t voltage)
 {
     int status;
 
@@ -302,7 +300,7 @@ static int mod_mock_psu_init(
     unsigned int element_count,
     const void *data)
 {
-    fwk_expect(data == NULL);
+    fwk_check(data == NULL);
 
     mod_mock_psu_ctx.elements =
         fwk_mm_calloc(element_count, sizeof(mod_mock_psu_ctx.elements[0]));
@@ -318,7 +316,7 @@ static int mod_mock_psu_element_init(
     struct mod_mock_psu_element_ctx *ctx;
     const struct mod_mock_psu_element_cfg *cfg = data;
 
-    fwk_expect(sub_element_count == 0);
+    fwk_check(sub_element_count == 0);
 
     ctx = mod_mock_psu_get_ctx(element_id);
 

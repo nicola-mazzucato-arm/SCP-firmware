@@ -45,51 +45,12 @@ def main():
     result = subprocess.call('CC=gcc make clean test', shell=True)
     results.append(('Framework tests', result))
 
-    banner('Test building the framework library')
-
-    cmd = \
-        'CC=gcc ' \
-        'BS_FIRMWARE_CPU=host ' \
-        'make clean lib-framework'
-    result = subprocess.call(cmd, shell=True)
-    results.append(('Framework build (Host, GCC)', result))
-
-    cmd = \
-        'CC=arm-none-eabi-gcc ' \
-        'BS_FIRMWARE_CPU=cortex-m3 ' \
-        'make clean lib-framework'
-    result = subprocess.call(cmd, shell=True)
-    results.append(('Framework build (Cortex-M3, GCC)', result))
-
-    cmd = \
-        'CC=armclang ' \
-        'BS_FIRMWARE_CPU=cortex-m3 ' \
-        'make clean lib-framework'
-    result = subprocess.call(cmd, shell=True)
-    results.append(('Framework build (Cortex-M3, ARM)', result))
-
-    banner('Test building arch library')
-
-    cmd = \
-        'CC=arm-none-eabi-gcc ' \
-        'BS_FIRMWARE_CPU=cortex-m3 ' \
-        'make clean lib-arch'
-    result = subprocess.call(cmd, shell=True)
-    results.append(('Arch build (Cortex-M3, GCC)', result))
-
-    cmd = \
-        'CC=armclang ' \
-        'BS_FIRMWARE_CPU=cortex-m3 ' \
-        'make clean lib-arch'
-    result = subprocess.call(cmd, shell=True)
-    results.append(('Arch build (Cortex-M3, ARM)', result))
-
     banner('Test building host product')
 
     cmd = \
         'CC=gcc ' \
         'PRODUCT=host ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product host build (GCC)', result))
 
@@ -99,7 +60,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=sgm775 ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgm775 release build (GCC)', result))
 
@@ -107,7 +68,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=sgm775 ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgm775 release build (ARM)', result))
 
@@ -115,7 +76,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=sgm775 ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgm775 debug build (GCC)', result))
 
@@ -123,7 +84,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=sgm775 ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgm775 debug build (ARM)', result))
 
@@ -133,7 +94,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=sgi575 ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgi575 release build (GCC)', result))
 
@@ -141,7 +102,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=sgi575 ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgi575 release build (ARM)', result))
 
@@ -149,7 +110,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=sgi575 ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgi575 debug build (GCC)', result))
 
@@ -157,7 +118,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=sgi575 ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgi575 debug build (ARM)', result))
 
@@ -167,7 +128,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=n1sdp ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product n1sdp debug build (GCC)', result))
 
@@ -175,7 +136,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=n1sdp ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product n1sdp debug build (ARM)', result))
 
@@ -183,7 +144,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=n1sdp ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product n1sdp release build (GCC)', result))
 
@@ -191,7 +152,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=n1sdp ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product n1sdp release build (ARM)', result))
 
@@ -201,7 +162,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=rdn1e1 ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product rdn1e1 release build (GCC)', result))
 
@@ -209,7 +170,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=rdn1e1 ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product rdn1e1 release build (ARM)', result))
 
@@ -217,7 +178,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=rdn1e1 ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product rdn1e1 debug build (GCC)', result))
 
@@ -225,7 +186,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=rdn1e1 ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product rdn1e1 debug build (ARM)', result))
 
@@ -235,7 +196,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=juno ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product Juno debug build (GCC)', result))
 
@@ -243,7 +204,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=juno ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product Juno debug build (ARM)', result))
 
@@ -251,7 +212,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=juno ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product Juno release build (GCC)', result))
 
@@ -259,7 +220,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=juno ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product Juno release build (ARM)', result))
 
@@ -269,7 +230,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=synquacer ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product synquacer release build (GCC)', result))
 
@@ -277,7 +238,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=synquacer ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product synquacer release build (ARM)', result))
 
@@ -285,7 +246,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=synquacer ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product synquacer debug build (GCC)', result))
 
@@ -293,7 +254,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=synquacer ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product synquacer debug build (ARM)', result))
 
@@ -303,7 +264,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=sgm776 ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgm776 release build (GCC)', result))
 
@@ -311,7 +272,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=sgm776 ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgm776 release build (ARM)', result))
 
@@ -319,7 +280,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=sgm776 ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgm776 debug build (GCC)', result))
 
@@ -327,7 +288,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=sgm776 ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product sgm776 debug build (ARM)', result))
 
@@ -337,7 +298,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=rddaniel ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product rddaniel release build (GCC)', result))
 
@@ -345,7 +306,7 @@ def main():
         'CC=armclang ' \
         'PRODUCT=rddaniel ' \
         'MODE=release ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product rddaniel release build (ARM)', result))
 
@@ -353,7 +314,7 @@ def main():
         'CC=arm-none-eabi-gcc ' \
         'PRODUCT=rddaniel ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product rddaniel debug build (GCC)', result))
 
@@ -361,9 +322,111 @@ def main():
         'CC=armclang ' \
         'PRODUCT=rddaniel ' \
         'MODE=debug ' \
-        'make clean all'
+        'make clean all -j'
     result = subprocess.call(cmd, shell=True)
     results.append(('Product rddaniel debug build (ARM)', result))
+
+    banner('Test building rddanielxlr product')
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=rddanielxlr ' \
+        'MODE=release ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product rddanielxlr release build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=rddanielxlr ' \
+        'MODE=release ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product rddanielxlr release build (ARM)', result))
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=rddanielxlr ' \
+        'MODE=debug ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product rddanielxlr debug build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=rddanielxlr ' \
+        'MODE=debug ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product rddanielxlr debug build (ARM)', result))
+
+    banner('Test building tc0 product')
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=tc0 ' \
+        'MODE=release ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product tc0 release build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=tc0 ' \
+        'MODE=release ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product tc0 release build (ARM)', result))
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=tc0 ' \
+        'MODE=debug ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product tc0 debug build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=tc0 ' \
+        'MODE=debug ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product tc0 debug build (ARM)', result))
+
+    banner('Test building morello product')
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=morello ' \
+        'MODE=debug ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product morello debug build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=morello ' \
+        'MODE=debug ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product morello debug build (ARM)', result))
+
+    cmd = \
+        'CC=arm-none-eabi-gcc ' \
+        'PRODUCT=morello ' \
+        'MODE=release ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product morello release build (GCC)', result))
+
+    cmd = \
+        'CC=armclang ' \
+        'PRODUCT=morello ' \
+        'MODE=release ' \
+        'make clean all -j'
+    result = subprocess.call(cmd, shell=True)
+    results.append(('Product morello release build (ARM)', result))
 
     banner('Tests summary')
 

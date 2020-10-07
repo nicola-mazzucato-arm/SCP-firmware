@@ -8,16 +8,18 @@
 #ifndef MOD_N1SDP_ROM_H
 #define MOD_N1SDP_ROM_H
 
+#include <mod_fip.h>
+
 #include <stdint.h>
 
 /*!
  * \addtogroup GroupN1SDPModule N1SDP Product Modules
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupN1SDPRom N1SDP SCP ROM Support
- * @{
+ * \{
  */
 
 /*!
@@ -28,15 +30,15 @@ struct n1sdp_rom_config {
     const uintptr_t ramfw_base;
 
     /*! Type of RAM Firmware to load */
-    const uint8_t image_type;
+    enum mod_fip_toc_entry_type image_type;
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_N1SDP_ROM_H */

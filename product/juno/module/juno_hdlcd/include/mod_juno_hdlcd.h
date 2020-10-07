@@ -8,21 +8,25 @@
 #ifndef MOD_JUNO_HDLCD_H
 #define MOD_JUNO_HDLCD_H
 
-#include <stdint.h>
-#include <fwk_id.h>
-#include <fwk_module_idx.h>
+#include "juno_clock.h"
+
 #include <mod_clock.h>
-#include <juno_clock.h>
+
+#include <fwk_id.h>
+#include <fwk_macros.h>
+#include <fwk_module_idx.h>
+
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupJUNOHDLCD JUNO HDLCD
  *
- * @{
+ * \{
  */
 
 /*!
@@ -101,8 +105,8 @@ struct mod_juno_hdlcd_drv_api {
      * \param index The index of the lookup table that contains the information
      *      to set the rate of the clock.
      *
-     * \retval FWK_SUCCESS The request is successful.
-     * \retval FWK_E_PARAM One or more parameters are incorrect.
+     * \retval ::FWK_SUCCESS The request is successful.
+     * \retval ::FWK_E_PARAM One or more parameters are incorrect.
      *
      * \return Status code representing the result of the operation.
      */
@@ -126,11 +130,11 @@ static const fwk_id_t mod_juno_hdlcd_api_id_hdlcd_driver_response =
     FWK_ID_API_INIT(FWK_MODULE_IDX_JUNO_HDLCD,
         MOD_JUNO_HDLCD_API_IDX_HDLCD_DRIVER_RESPONSE);
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_JUNO_HDLCD_H */

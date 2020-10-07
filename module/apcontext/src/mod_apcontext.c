@@ -5,21 +5,22 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <string.h>
+#include <mod_apcontext.h>
+#include <mod_clock.h>
+
 #include <fwk_assert.h>
+#include <fwk_event.h>
 #include <fwk_id.h>
+#include <fwk_log.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_notification.h>
 #include <fwk_status.h>
-#include <mod_apcontext.h>
-#include <mod_clock.h>
-#include <mod_log.h>
-#include <mod_power_domain.h>
+
+#include <inttypes.h>
+#include <string.h>
 
 #define MODULE_NAME "[APContext]"
-
-static const struct mod_log_api *log;
 
 static void apcontext_zero(void)
 {
@@ -27,8 +28,9 @@ static void apcontext_zero(void)
 
     config = fwk_module_get_data(fwk_module_id_apcontext);
 
-    log->log(MOD_LOG_GROUP_DEBUG, MODULE_NAME
-        " Zeroing AP context area [0x%08x - 0x%08x]\n",
+    FWK_LOG_INFO(
+        MODULE_NAME " Zeroing AP context area [0x%" PRIxPTR " - 0x%" PRIxPTR
+                    "]",
         config->base,
         config->base + config->size);
 
@@ -57,21 +59,6 @@ static int apcontext_init(fwk_id_t module_id, unsigned int element_count,
     return FWK_SUCCESS;
 }
 
-static int apcontext_bind(fwk_id_t id, unsigned int round)
-{
-    int status;
-
-    /* Skip second round */
-    if (round > 0)
-        return FWK_SUCCESS;
-
-    status = fwk_module_bind(fwk_module_id_log, MOD_LOG_API_ID, &log);
-    if (status != FWK_SUCCESS)
-        return FWK_E_PANIC;
-
-    return FWK_SUCCESS;
-}
-
 static int apcontext_start(fwk_id_t id)
 {
     const struct mod_apcontext_config *config =
@@ -94,8 +81,9 @@ static int apcontext_process_notification(const struct fwk_event *event,
 {
     struct clock_notification_params *params;
 
-    assert(fwk_id_is_equal(event->id, mod_clock_notification_id_state_changed));
-    assert(fwk_id_is_type(event->target_id, FWK_ID_TYPE_MODULE));
+    fwk_assert(
+        fwk_id_is_equal(event->id, mod_clock_notification_id_state_changed));
+    fwk_assert(fwk_id_is_type(event->target_id, FWK_ID_TYPE_MODULE));
 
     params = (struct clock_notification_params *)event->params;
 
@@ -118,7 +106,6 @@ const struct fwk_module module_apcontext = {
     .name = "APContext",
     .type = FWK_MODULE_TYPE_SERVICE,
     .init = apcontext_init,
-    .bind = apcontext_bind,
     .start = apcontext_start,
     .process_notification = apcontext_process_notification,
 };

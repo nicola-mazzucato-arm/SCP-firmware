@@ -11,20 +11,22 @@
 #ifndef FWK_MODULE_H
 #define FWK_MODULE_H
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <fwk_element.h>
 #include <fwk_event.h>
 #include <fwk_id.h>
+#include <fwk_io.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupLibFramework Framework
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupModule Modules
- * @{
+ * \{
  */
 
 /*!
@@ -88,6 +90,19 @@ struct fwk_module {
     #endif
 
     /*!
+     * \brief Stream adapter.
+     *
+     * \details Every module may provide an optional stream adapter, which
+     *      allows it to service input/output requests to and from other modules
+     *      in a fashion similar to standard file operations in the standard
+     *      library.
+     *
+     *      This adapter handles adapter requests to the module, its elements,
+     *      and its sub-elements.
+     */
+    struct fwk_io_adapter adapter;
+
+    /*!
      * \brief Pointer to the module initialization function.
      *
      * \details This function is invoked during the initialization stage, which
@@ -103,8 +118,8 @@ struct fwk_module {
      * \param element_count Number of module elements.
      * \param data Module-specific configuration data.
      *
-     * \retval FWK_SUCCESS The module was initialized successfully.
-     * \retval FWK_E_NOMEM A memory allocation failed.
+     * \retval ::FWK_SUCCESS The module was initialized successfully.
+     * \retval ::FWK_E_NOMEM A memory allocation failed.
      * \return One of the other module-defined error codes.
      */
     int (*init)(fwk_id_t module_id, unsigned int element_count,
@@ -129,8 +144,8 @@ struct fwk_module {
      * \param sub_element_count Number of sub-elements.
      * \param data Element-specific configuration data.
      *
-     * \retval FWK_SUCCESS The element was initialized successfully.
-     * \retval FWK_E_NOMEM A memory allocation failed.
+     * \retval ::FWK_SUCCESS The element was initialized successfully.
+     * \retval ::FWK_E_NOMEM A memory allocation failed.
      * \return One of the other module-defined error codes.
      */
     int (*element_init)(fwk_id_t element_id, unsigned int sub_element_count,
@@ -150,8 +165,8 @@ struct fwk_module {
      *
      * \param module_id Identifier of the module element.
      *
-     * \retval FWK_SUCCESS The module post-initialization was successful.
-     * \retval FWK_E_NOMEM A memory allocation failed.
+     * \retval ::FWK_SUCCESS The module post-initialization was successful.
+     * \retval ::FWK_E_NOMEM A memory allocation failed.
      * \return One of the other module-defined error codes.
      */
     int (*post_init)(fwk_id_t module_id);
@@ -180,9 +195,9 @@ struct fwk_module {
      * \param round Current call round, \c 0 for the first round \c 1 for
      *      the second round.
      *
-     * \retval FWK_SUCCESS The binding was successful.
-     * \retval FWK_E_ACCESS At least one binding request was rejected.
-     * \retval FWK_E_NOMEM A memory allocation failed.
+     * \retval ::FWK_SUCCESS The binding was successful.
+     * \retval ::FWK_E_ACCESS At least one binding request was rejected.
+     * \retval ::FWK_E_NOMEM A memory allocation failed.
      * \return One of the other module-defined error codes.
      */
     int (*bind)(fwk_id_t id, unsigned int round);
@@ -205,7 +220,7 @@ struct fwk_module {
      *
      * \param id Identifier of the module or element to start.
      *
-     * \retval FWK_SUCCESS The module or element was successfully started.
+     * \retval ::FWK_SUCCESS The module or element was successfully started.
      * \return One of the other module-defined error codes.
      */
     int (*start)(fwk_id_t id);
@@ -233,9 +248,9 @@ struct fwk_module {
      * \param [out] api Pointer to the API implementation to be used by the
      *      requester.
      *
-     * \retval FWK_SUCCESS The binding request was accepted by the module or
+     * \retval ::FWK_SUCCESS The binding request was accepted by the module or
      *      element.
-     * \retval FWK_E_ACCESS The binding request was rejected by the module or
+     * \retval ::FWK_E_ACCESS The binding request was rejected by the module or
      *      element.
      * \return One of the other module-defined error codes.
      */
@@ -249,10 +264,10 @@ struct fwk_module {
      *      the module or one of its elements.
      *
      * \note This function is \b optional. If a response event is expected and
-     *      the \ref fwk_event.is_delayed_response flag is not set by the
+     *      the ::fwk_event::is_delayed_response flag is not set by the
      *      processing function then the response event is immediately and
      *      automatically sent to the event's source by the framework. If
-     *      however the \ref fwk_event.is_delayed_response flag is set by the
+     *      however the ::fwk_event::is_delayed_response flag is set by the
      *      processing function then the framework does not send the response
      *      event and it is the responsability of the event's target to send it
      *      at some point.
@@ -261,7 +276,7 @@ struct fwk_module {
      * \param [out] resp_event The response event to the provided event if
      *      any.
      *
-     * \retval FWK_SUCCESS The event was processed successfully.
+     * \retval ::FWK_SUCCESS The event was processed successfully.
      * \return One of the other module-defined error codes.
      */
     int (*process_event)(const struct fwk_event *event,
@@ -279,7 +294,7 @@ struct fwk_module {
      * \param [out] resp_event The response event to the provided event, if
      *      any.
      *
-     * \retval FWK_SUCCESS The notification was processed successfully.
+     * \retval ::FWK_SUCCESS The notification was processed successfully.
      * \return One of the other module-defined error codes.
      */
     int (*process_notification)(const struct fwk_event *event,
@@ -287,28 +302,118 @@ struct fwk_module {
 };
 
 /*!
+ * \brief Define a static element table with the content of the table.
+ *
+ * \param[in] ... An array of elements in the form `{ X, Y, Z, { 0 } }`.
+ *
+ * \see ::fwk_module_elements::table
+ */
+#define FWK_MODULE_STATIC_ELEMENTS(...) \
+    { \
+        .type = FWK_MODULE_ELEMENTS_TYPE_STATIC, \
+        .table = (const struct fwk_element[])__VA_ARGS__, \
+    }
+
+/*!
+ * \brief Define a static element table with a pointer to the table.
+ *
+ * \details Some element tables require extra preprocessing beforehand. As it is
+ *      undefined behaviour for preprocessing macros to occur within macro
+ *      argument lists, this macro has been provided to work around this
+ *      language restriction.
+ *
+ * \param[in] TABLE Pointer to the static element table.
+ *
+ * \see ::fwk_module_elements::table
+ */
+#define FWK_MODULE_STATIC_ELEMENTS_PTR(TABLE) \
+    { \
+        .type = FWK_MODULE_ELEMENTS_TYPE_STATIC, \
+        .table = TABLE, \
+    }
+
+/*!
+ * \brief Define a dynamic element table.
+ *
+ * \details Element table generators are functions that take a module identifier
+ *      and return an element table. They will be called once the module has
+ *      begun initialization, and may allocate a variable number of elements.
+ *
+ * \param[in] GENERATOR Function to generate the element table.
+ *
+ * \see ::fwk_module_elements::generator
+ */
+#define FWK_MODULE_DYNAMIC_ELEMENTS(GENERATOR) \
+    { \
+        .type = FWK_MODULE_ELEMENTS_TYPE_DYNAMIC, \
+        .generator = (GENERATOR), \
+    }
+
+/*!
+ * \brief Element table type.
+ */
+enum fwk_module_elements_type {
+    FWK_MODULE_ELEMENTS_TYPE_NONE, /*!< No element table. */
+    FWK_MODULE_ELEMENTS_TYPE_STATIC, /*<! Static element table. */
+    FWK_MODULE_ELEMENTS_TYPE_DYNAMIC, /*<! Dynamic element table. */
+};
+
+/*!
+ * \brief Element table.
+ */
+struct fwk_module_elements {
+    /*!
+     * \brief Element table type.
+     *
+     * \details Elements may be statically defined, or they can be generated
+     *      once the module comes online.
+     */
+    enum fwk_module_elements_type type;
+
+    /*!
+     * \brief Element table data.
+     */
+    union {
+        /*!
+         * \brief Pointer to the function to get the table of element
+         *      descriptions.
+         *
+         * \param[in] module_id Identifier of the module.
+         *
+         * \details The table of module element descriptions ends with an
+         *      invalid element description where the pointer to the element
+         *      name is equal to `NULL`.
+         *
+         * \warning The framework does not copy the element description data
+         *      and keep a pointer to the ones returned by this function.
+         *      Pointers returned by this function must thus points to data
+         *      with static storage or data stored in memory allocated from
+         *      the memory management component.
+         *
+         * \return Pointer to table of element descriptions.
+         */
+        const struct fwk_element *(*generator)(fwk_id_t module_id);
+
+        /*!
+         * \brief Table of element descriptions.
+         *
+         * \details The table of module element descriptions ends with an
+         *      invalid element description where the pointer to the element
+         *      name is equal to `NULL`.
+         */
+        const struct fwk_element *table;
+    };
+};
+
+/*!
  * \brief Module configuration.
  */
 struct fwk_module_config {
-    /*!
-     * \brief Pointer to the function to get the table of element descriptions.
-     *
-     * \param module_id Identifier of the module.
-     *
-     * \details The table of module element descriptions ends with an invalid
-     *      element description where the pointer to the element name is
-     *      equal to NULL.
-     *
-     * \warning The framework does not copy the element description data and
-     *      keep a pointer to the ones returned by this function. Pointers
-     *      returned by this function must thus points to data with static
-     *      storage or data stored in memory allocated from the memory
-     *      management component.
-     */
-    const struct fwk_element *(*get_element_table)(fwk_id_t module_id);
-
     /*! Pointer to the module-specific configuration data */
     const void *data;
+
+    /*! Element table */
+    struct fwk_module_elements elements;
 };
 
 /*!
@@ -389,7 +494,7 @@ bool fwk_module_is_valid_notification_id(fwk_id_t id);
  *
  * \param module_id Identifier of the module.
  *
- * \retval FWK_E_PARAM The identifier of the module is invalid.
+ * \retval ::FWK_E_PARAM The identifier of the module is invalid.
  * \return Number of module elements.
  */
 int fwk_module_get_element_count(fwk_id_t module_id);
@@ -399,7 +504,7 @@ int fwk_module_get_element_count(fwk_id_t module_id);
  *
  * \param element_id Identifier of the element.
  *
- * \retval FWK_E_PARAM The identifier of the element is invalid.
+ * \retval ::FWK_E_PARAM The identifier of the element is invalid.
  * \return Number of sub-elements.
  */
 int fwk_module_get_sub_element_count(fwk_id_t element_id);
@@ -437,20 +542,51 @@ const void *fwk_module_get_data(fwk_id_t id);
  * \param api_id Identifier of the API to return an implementation of.
  * \param api [out] Pointer to storage for the pointer to the API.
  *
- * \retval FWK_SUCCESS The API was returned.
- * \retval FWK_E_PARAM A least one of the identifiers is invalid.
- * \retval FWK_E_STATE Call outside of the pre-runtime bind stage.
- * \retval FWK_E_ACCESS The access to the API was refused.
- * \retval FWK_E_HANDLER The returned API pointer is invalid (NULL).
+ * \retval ::FWK_SUCCESS The API was returned.
+ * \retval ::FWK_E_PARAM A least one of the identifiers is invalid.
+ * \retval ::FWK_E_STATE Call outside of the pre-runtime bind stage.
+ * \retval ::FWK_E_ACCESS The access to the API was refused.
+ * \retval ::FWK_E_HANDLER The returned API pointer is invalid (NULL).
  */
 int fwk_module_bind(fwk_id_t target_id, fwk_id_t api_id, const void *api);
 
 /*!
- * @}
+ * \brief Get the [stream adapter](::fwk_module::adapter) of a module.
+ *
+ * \details Stream adapters are owned by the module, rather than its elements or
+ *      sub-elements, but element and sub-element identifiers may also be
+ *      provided to this function to get the adapter of the parent module.
+ *
+ * \param[out] adapter Pointer to the stream adapter belonging to the entity, or
+ *      a null pointer value if the module has no registered adapter.
+ * \param[in] id Identifier of an entity.
+ *
+ * \return Status code representing the result of the operation.
+ *
+ * \retval ::FWK_SUCCESS The operation succeeded.
+ * \retval ::FWK_E_PARAM An invalid parameter was encountered:
+ *      - The `adapter` parameter was a null pointer value.
+ *      - The `id` parameter did not resolve to a valid entity.
+ */
+int fwk_module_adapter(const struct fwk_io_adapter **adapter, fwk_id_t id);
+
+/*!
+ * \internal
+ *
+ * \brief Initialize the module component.
+ *
+ * \details Initializes the module framework component contexts, allowing
+ *      module details to be accessed through the module interfaces. This does
+ *      not start any modules.
+ */
+void fwk_module_init(void);
+
+/*!
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* FWK_MODULE_H */

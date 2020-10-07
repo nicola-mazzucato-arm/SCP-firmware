@@ -5,11 +5,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdbool.h>
-#include <fwk_element.h>
-#include <fwk_module.h>
+#include "scp_system_mmap.h"
+
 #include <mod_ddr_phy500.h>
-#include <scp_system_mmap.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
+
+#include <stdbool.h>
 
 /* Default configuration values for DDR PHY500 devices. */
 static const struct mod_ddr_phy500_reg ddr_reg_val = {
@@ -50,10 +54,12 @@ static const struct fwk_element *ddr_phy500_get_element_table
 
 /* Configuration of the DDR PHY500 module. */
 struct fwk_module_config config_ddr_phy500 = {
-    .get_element_table = ddr_phy500_get_element_table,
-    .data = &((struct mod_ddr_phy500_module_config) {
+    .data =
+        &(struct mod_ddr_phy500_module_config){
             .ddr_reg_val = &ddr_reg_val,
             .initialize_init_complete = true,
             .initialize_ref_en = true,
-        }),
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(ddr_phy500_get_element_table),
 };

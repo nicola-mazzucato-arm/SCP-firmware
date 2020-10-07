@@ -8,7 +8,6 @@
 BS_FIRMWARE_CPU := cortex-m7
 BS_FIRMWARE_HAS_MULTITHREADING := yes
 BS_FIRMWARE_HAS_NOTIFICATION := yes
-BS_FIRMWARE_NOTIFICATION_COUNT := 128
 
 BS_FIRMWARE_MODULES := \
     armv7m_mpu \
@@ -16,7 +15,13 @@ BS_FIRMWARE_MODULES := \
     system_info \
     pcid \
     pl011 \
-    log \
+    pik_clock \
+    css_clock \
+    clock \
+    gtimer \
+    timer \
+    cmn_rhodes \
+    apcontext \
     ppu_v1 \
     system_power \
     mhu2 \
@@ -24,16 +29,9 @@ BS_FIRMWARE_MODULES := \
     scmi \
     sds \
     system_pll \
-    pik_clock \
-    css_clock \
-    clock \
-    gtimer \
-    timer \
-    apcontext \
     power_domain \
     scmi_power_domain \
     scmi_system_power \
-    cmn_rhodes \
     rddaniel_system
 
 BS_FIRMWARE_SOURCES := \
@@ -43,7 +41,6 @@ BS_FIRMWARE_SOURCES := \
     rtx_config.c \
     config_armv7m_mpu.c \
     config_pl011.c \
-    config_log.c \
     config_power_domain.c \
     config_ppu_v1.c \
     config_mhu2.c \
@@ -58,6 +55,7 @@ BS_FIRMWARE_SOURCES := \
     config_pik_clock.c \
     config_css_clock.c \
     config_clock.c \
-    config_apcontext.c
+    config_apcontext.c \
+    config_scmi_power_domain.c
 
 include $(BS_DIR)/firmware.mk

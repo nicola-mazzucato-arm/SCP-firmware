@@ -8,32 +8,36 @@
  *     Juno DMC-400 driver
  */
 
+#include "juno_dmc400.h"
+#include "juno_id.h"
+#include "juno_scc.h"
+#include "scp_config.h"
+#include "system_clock.h"
+
+#include <mod_juno_dmc400.h>
+#include <mod_power_domain.h>
+#include <mod_system_power.h>
+#include <mod_timer.h>
+
 #include <fwk_assert.h>
+#include <fwk_event.h>
 #include <fwk_interrupt.h>
+#include <fwk_log.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <fwk_multi_thread.h>
 #include <fwk_notification.h>
 #include <fwk_status.h>
-#include <mod_juno_dmc400.h>
-#include <mod_log.h>
-#include <mod_power_domain.h>
-#include <mod_system_power.h>
-#include <cmsis_compiler.h>
-#include <juno_id.h>
-#include <juno_irq.h>
-#include <juno_dmc400.h>
-#include <juno_scc.h>
-#include <scp_config.h>
-#include <system_clock.h>
-#include <system_mmap.h>
+#include <fwk_thread.h>
+
+#include <fmw_cmsis.h>
+
+#include <stddef.h>
 
 struct juno_dmc400_ctx {
     const struct mod_juno_dmc400_ddr_phy_api *ddr_phy_api;
     const struct mod_timer_api *timer_api;
     unsigned int dmc_refclk_ratio;
-    const struct mod_log_api *log_api;
 };
 
 static struct juno_dmc400_ctx ctx;
@@ -608,7 +612,7 @@ static int ddr_training(fwk_id_t id)
     return FWK_SUCCESS;
 
 timeout:
-    ctx.log_api->log(MOD_LOG_GROUP_WARNING, "[DMC] Training time-out\n");
+    FWK_LOG_WARN("[DMC] Training time-out");
 
     return FWK_E_TIMEOUT;
 }
@@ -644,7 +648,7 @@ static int ddr_retraining(fwk_id_t id)
 
     fwk_interrupt_enable(PHY_TRAINING_IRQ);
 
-    ctx.log_api->log(MOD_LOG_GROUP_DEBUG, "[DMC] Re-training done\n");
+    FWK_LOG_INFO("[DMC] Re-training done");
 
     return FWK_SUCCESS;
 }
@@ -874,11 +878,6 @@ static int juno_dmc400_bind(fwk_id_t id, unsigned int round)
     module_config = fwk_module_get_data(fwk_module_id_juno_dmc400);
     fwk_assert(module_config != NULL);
 
-    status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-                             MOD_LOG_API_ID, &ctx.log_api);
-    if (status != FWK_SUCCESS)
-        return status;
-
     status = fwk_module_bind(module_config->ddr_phy_module_id,
                              module_config->ddr_phy_api_id, &ctx.ddr_phy_api);
     if (status != FWK_SUCCESS)
@@ -904,8 +903,7 @@ static int juno_dmc400_start(fwk_id_t id)
         return FWK_SUCCESS;
 
     if (SCC->GPR0 & SCC_GPR0_DDR_DISABLE) {
-        ctx.log_api->log(MOD_LOG_GROUP_DEBUG,
-                         "[DMC] GPR_0 disable flag set: skipping init");
+        FWK_LOG_INFO("[DMC] GPR_0 disable flag set: skipping init");
 
         return FWK_SUCCESS;
     }
@@ -920,6 +918,8 @@ static int juno_dmc400_start(fwk_id_t id)
 
     ctx.dmc_refclk_ratio = (DDR_FREQUENCY_MHZ * FWK_MHZ) / CLOCK_RATE_REFCLK;
     fwk_assert(ctx.dmc_refclk_ratio > 0);
+
+    FWK_LOG_INFO("[DMC] Initializing DMC-400 at 0x%x", (uintptr_t)dmc);
 
     status = ddr_clk_init(id);
     if (status != FWK_SUCCESS)
@@ -955,7 +955,7 @@ static int juno_dmc400_start(fwk_id_t id)
     dmc->INTEG_CFG = 0x00000000;
     dmc->INTEG_OUTPUTS = 0x00000000;
 
-    ctx.log_api->log(MOD_LOG_GROUP_DEBUG, "[DMC] DDR Ready\n");
+    FWK_LOG_INFO("[DMC] DDR Ready");
 
     /* Switch to READY */
     dmc->MEMC_CMD = DMC400_CMD_GO;

@@ -23,8 +23,6 @@ BS_FIRMWARE_MODULES := \
     juno_rom \
     juno_soc_clock \
     clock \
-    pl011 \
-    log \
     gtimer \
     sds \
     bootloader
@@ -36,7 +34,6 @@ BS_FIRMWARE_SOURCES := \
     config_juno_rom.c \
     config_juno_soc_clock.c \
     config_clock.c \
-    config_log.c \
     config_timer.c \
     config_sds.c \
     config_bootloader.c

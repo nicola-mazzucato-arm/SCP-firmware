@@ -8,13 +8,14 @@
 #ifndef MOD_PCID_H
 #define MOD_PCID_H
 
+#include <fwk_macros.h>
+
 #include <stdbool.h>
 #include <stdint.h>
-#include <fwk_macros.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
@@ -22,7 +23,7 @@
  *
  * \brief Module used to check the peripheral and component IDs.
  *
- * @{
+ * \{
  */
 
 /*!
@@ -60,11 +61,11 @@ bool mod_pcid_check_registers(const struct mod_pcid_registers *registers,
                               const struct mod_pcid_registers *expected);
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_PCID_H */

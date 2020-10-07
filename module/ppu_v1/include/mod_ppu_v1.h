@@ -11,21 +11,22 @@
 #ifndef MOD_PPU_V1_H
 #define MOD_PPU_V1_H
 
+#include <mod_power_domain.h>
+
+#include <fwk_id.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <fwk_id.h>
-#include <mod_power_domain.h>
-
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupModulePPUv1 PPUv1 Driver
- * @{
+ * \{
  */
 
 /*!
@@ -51,6 +52,27 @@ struct mod_ppu_v1 {
 
     /*! PPU's IRQ number */
     unsigned int irq;
+};
+/*!
+ * \brief Timer for set_state.
+ *
+ * \details This structure is required to be filled in PPUv1 config file only
+ *          when the timeout feature is required.
+ */
+struct mod_ppu_v1_timer_config {
+    /*!
+     * \brief Timer identifier.
+     *
+     * \details Used for binding with the timer API and waiting for specified
+     *          delay after setting the PPU state.
+     */
+    fwk_id_t timer_id;
+
+    /*!
+     * PPU state change wait delay in micro seconds.
+     * A valid non-zero value has to be specified when using this feature.
+     */
+    uint32_t set_state_timeout_us;
 };
 
 /*!
@@ -87,7 +109,7 @@ struct mod_ppu_v1_pd_config {
     /*!
      * Flag indicating if this domain should be powered on during element
      * init. This flag is only supported for device and system PPUs and should
-     * not be set for any other type.
+     * not be set for any other type. Timeout is not provided at this stage.
      */
     bool default_power_on;
 
@@ -95,22 +117,25 @@ struct mod_ppu_v1_pd_config {
      * \brief Identifier of an entity wishing to be notified when the PPU
      *     transitions out of the OFF state.
      *
-     * \note This field may be set to \ref FWK_ID_NONE, in which case no
+     * \note This field may be set to ::FWK_ID_NONE, in which case no
      *     observer will be set.
      */
     fwk_id_t observer_id;
 
     /*!
      * \brief Identifier of the power state observer API implemented by
-     *     \ref observer_id.
+     *     ::mod_ppu_v1_pd_config::observer_id.
      */
     fwk_id_t observer_api;
 
     /*!
      * \brief Parameter passed to
-     *     \ref mod_ppu_v1_power_state_observer_api::post_ppu_on().
+     *     ::mod_ppu_v1_power_state_observer_api::post_ppu_on().
      */
     void *post_ppu_on_param;
+
+    /*! Timer descriptor */
+    struct mod_ppu_v1_timer_config *timer_config;
 };
 
 /*!
@@ -149,18 +174,18 @@ struct ppu_v1_boot_api {
      *
      * \param pd_id Identifier of the power domain
      *
-     * \retval FWK_SUCCESS Operation successful.
+     * \retval ::FWK_SUCCESS Operation successful.
      * \return One of the standard framework error codes.
      */
     int (*power_mode_on)(fwk_id_t pd_id);
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_PPU_V1_H */

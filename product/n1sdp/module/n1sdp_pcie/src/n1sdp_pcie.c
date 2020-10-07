@@ -5,27 +5,35 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "n1sdp_scc_reg.h"
+#include "n1sdp_scp_pik.h"
+
+#include <n1sdp_pcie.h>
+
+#include <internal/pcie_ctrl_apb_reg.h>
+
+#include <mod_timer.h>
+
+#include <fwk_assert.h>
+#include <fwk_id.h>
+#include <fwk_module_idx.h>
+#include <fwk_status.h>
+
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include <fwk_assert.h>
-#include <fwk_status.h>
-#include <internal/pcie_ctrl_apb_reg.h>
-#include <mod_n1sdp_pcie.h>
-#include <mod_timer.h>
-#include <n1sdp_pcie.h>
-#include <n1sdp_scp_pik.h>
 
-void pcie_phy_init(uint32_t phy_apb_base)
+void pcie_phy_init(uint32_t phy_apb_base, uint32_t pcie_lane_count)
 {
     uint32_t j;
+    uint32_t lane_count = (1 << pcie_lane_count);
 
     *((unsigned int *)(0x30038 | phy_apb_base)) = 0x00000013;
     *((unsigned int *)(0x0010C | phy_apb_base)) = 0x0000002D;
     *((unsigned int *)(0x00138 | phy_apb_base)) = 0x00001005;
     *((unsigned int *)(0x00260 | phy_apb_base)) = 0x00002100;
 
-    for (j = 0; j < 16; j++) {
+    for (j = 0; j < lane_count; j++) {
         *((unsigned int *)((j << 11) | 0x1000C | phy_apb_base)) = 0x00006910;
         *((unsigned int *)((j << 11) | 0x100EC | phy_apb_base)) = 0x00000055;
 
@@ -263,7 +271,7 @@ void pcie_phy_init(uint32_t phy_apb_base)
 
 bool pcie_wait_condition(void *data)
 {
-    assert(data != NULL);
+    fwk_assert(data != NULL);
 
     struct pcie_wait_condition_data *wait_data =
         (struct pcie_wait_condition_data *)data;
@@ -276,8 +284,9 @@ bool pcie_wait_condition(void *data)
     case PCIE_INIT_STAGE_CCIX_POWER_ON:
         return ((SCC->CCIX_PM_CTRL & SCC_CCIX_PM_CTRL_PWR_ACK_MASK) != 0);
     case PCIE_INIT_STAGE_PHY:
-        return ((ctrl_apb->RESET_STATUS &
-                 RESET_STATUS_PHY_REL_ST_MASK) != 0);
+        return (
+            ((ctrl_apb->RESET_STATUS & RESET_STATUS_PHY_REL_ST_MASK) != 0) &&
+            ((ctrl_apb->RESET_STATUS & RESET_STATUS_PLL_ST_MASK) != 0));
     case PCIE_INIT_STAGE_CTRL:
         return ((ctrl_apb->RESET_STATUS &
                  RESET_STATUS_RC_REL_ST_MASK) != 0);
@@ -285,7 +294,7 @@ bool pcie_wait_condition(void *data)
     case PCIE_INIT_STAGE_LINK_RE_TRNG:
         return ((ctrl_apb->RP_LTSSM_STATE & RP_LTSSM_STATE_MASK) == 0x10);
     default:
-        assert(false);
+        fwk_unexpected();
         return false;
     }
 }
@@ -293,11 +302,12 @@ bool pcie_wait_condition(void *data)
 int pcie_init(struct pcie_ctrl_apb_reg *ctrl_apb,
               struct mod_timer_api *timer_api,
               enum pcie_init_stage stage,
-              enum pcie_gen gen)
+              enum pcie_gen gen,
+              enum pcie_lane_count lane_count)
 {
-    assert(ctrl_apb != NULL);
-    assert(timer_api != NULL);
-    assert(stage < PCIE_INIT_STAGE_COUNT);
+    fwk_assert(ctrl_apb != NULL);
+    fwk_assert(timer_api != NULL);
+    fwk_assert(stage < PCIE_INIT_STAGE_COUNT);
 
     struct pcie_wait_condition_data wait_data;
     int status;
@@ -327,7 +337,7 @@ int pcie_init(struct pcie_ctrl_apb_reg *ctrl_apb,
         ctrl_apb->RP_CONFIG_IN &= ~RP_CONFIG_IN_PCIE_GEN_SEL_MASK;
         ctrl_apb->RP_CONFIG_IN &= ~RP_CONFIG_IN_LANE_CNT_IN_MASK;
 
-        ctrl_apb->RP_CONFIG_IN |= (0x4 << RP_CONFIG_IN_LANE_CNT_IN_POS) |
+        ctrl_apb->RP_CONFIG_IN |= (lane_count << RP_CONFIG_IN_LANE_CNT_IN_POS) |
                                   (gen << RP_CONFIG_IN_PCIE_GEN_SEL_POS);
         ctrl_apb->RESET_CTRL = RESET_CTRL_RC_REL_MASK;
         status = timer_api->wait(FWK_ID_ELEMENT(FWK_MODULE_IDX_TIMER, 0),
@@ -350,7 +360,7 @@ int pcie_init(struct pcie_ctrl_apb_reg *ctrl_apb,
         break;
 
     default:
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PARAM;
     }
     return FWK_SUCCESS;
@@ -363,9 +373,9 @@ int pcie_link_retrain(struct pcie_ctrl_apb_reg *ctrl_apb,
     uint32_t reg_val = 0;
     struct pcie_wait_condition_data wait_data;
 
-    assert(ctrl_apb != NULL);
-    assert(rp_ep_config_base != 0x0);
-    assert(timer_api != NULL);
+    fwk_assert(ctrl_apb != NULL);
+    fwk_assert(rp_ep_config_base != 0x0);
+    fwk_assert(timer_api != NULL);
 
     wait_data.ctrl_apb = ctrl_apb;
     wait_data.stage = PCIE_INIT_STAGE_LINK_RE_TRNG;
@@ -455,7 +465,7 @@ int pcie_rp_ep_config_write_word(uint32_t base,
         return FWK_E_PARAM;
 
     base |= ROOT_PORT_WRITE_ENABLE;
-    *(uint32_t *)(base + offset) = value;
+    *(volatile uint32_t *)(base + offset) = value;
 
     return FWK_SUCCESS;
 }
@@ -467,37 +477,45 @@ int pcie_rp_ep_config_read_word(uint32_t base,
     if ((offset % 4) || (value == NULL))
         return FWK_E_PARAM;
 
-    *value = *(uint32_t *)(base + offset);
+    *value = *(volatile uint32_t *)(base + offset);
 
     return FWK_SUCCESS;
 }
 
 int pcie_set_gen_tx_preset(uint32_t rp_ep_config_apb_base,
-                           uint32_t preset,
+                           uint32_t down_stream_tx_preset,
+                           uint32_t up_stream_tx_preset,
                            enum pcie_gen gen)
 {
     uint32_t i;
+    uint32_t j;
     uint32_t offset;
     uint32_t reg_value;
-    uint32_t preset_reg = 0;
+    uint32_t preset_value = 0;
     uint32_t offset_min;
     uint32_t offset_max;
     uint32_t nibble;
 
-    assert((gen == PCIE_GEN_3) || (gen == PCIE_GEN_4));
+    fwk_assert((gen == PCIE_GEN_3) || (gen == PCIE_GEN_4));
 
     offset_min = (gen == PCIE_GEN_3) ? GEN3_OFFSET_MIN : GEN4_OFFSET_MIN;
     offset_max = (gen == PCIE_GEN_3) ? GEN3_OFFSET_MAX : GEN4_OFFSET_MAX;
     nibble = (gen == PCIE_GEN_3) ? GEN3_PRESET : GEN4_PRESET;
 
-    for (i = 0; i < 32; i += nibble)
-        preset_reg |= (preset << i);
+    for (i = 0, j = 0; i < 32; i += nibble, j++) {
+        if (j%2 == 0)
+            preset_value |= (down_stream_tx_preset << i);
+        else
+            preset_value |= (up_stream_tx_preset << i);
+    }
 
     for (offset = offset_min; offset < offset_max; offset += 0x4) {
-        pcie_rp_ep_config_write_word(rp_ep_config_apb_base, offset, preset_reg);
-        pcie_rp_ep_config_read_word(rp_ep_config_apb_base, offset, &reg_value);
+        pcie_rp_ep_config_write_word(rp_ep_config_apb_base,
+                                    offset, preset_value);
+        pcie_rp_ep_config_read_word(rp_ep_config_apb_base,
+                                    offset, &reg_value);
 
-        if (reg_value != preset_reg)
+        if (reg_value != preset_value)
             return FWK_E_DATA;
     }
     return FWK_SUCCESS;

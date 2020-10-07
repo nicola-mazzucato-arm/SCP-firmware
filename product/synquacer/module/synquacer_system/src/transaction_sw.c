@@ -5,11 +5,17 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <synquacer_debug.h>
-#include <synquacer_mmap.h>
-#include <low_level_access.h>
+#include "low_level_access.h"
+#include "synquacer_common.h"
 
 #include <internal/transaction_sw.h>
+
+#include <mod_synquacer_system.h>
+
+#include <fwk_log.h>
+
+#include <inttypes.h>
+#include <stdint.h>
 
 #define STATUS_ADDR 4
 
@@ -20,7 +26,7 @@ void set_transactionsw_off(
     unsigned int intsts;
     uint32_t value;
 
-    SYNQUACER_DEV_LOG_DEBUG("  traSW disable_bit =  %08x\n", disable_bit);
+    FWK_LOG_INFO("  traSW disable_bit =  %08" PRIx32, disable_bit);
 
     DI(intsts);
 
@@ -45,7 +51,7 @@ void set_transactionsw_on(uint32_t transactionsw_reg_addr, uint32_t enable_bit)
     unsigned int intsts;
     uint32_t value;
 
-    SYNQUACER_DEV_LOG_DEBUG("  traSW enable_bit =  %08x\n", enable_bit);
+    FWK_LOG_INFO("  traSW enable_bit =  %08" PRIx32, enable_bit);
 
     DI(intsts);
 

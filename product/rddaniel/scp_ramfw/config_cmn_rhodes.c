@@ -5,12 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "clock_soc.h"
+#include "scp_css_mmap.h"
+
+#include <mod_cmn_rhodes.h>
+
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_cmn_rhodes.h>
-#include <clock_soc.h>
-#include <scp_css_mmap.h>
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /*
  * CMN_RHODES nodes
@@ -23,22 +30,22 @@
 #define NODE_ID_SBSX 0
 
 static const unsigned int snf_table[] = {
-    MEM_CNTRL0_ID, /* Maps to HN-F logical node 0 */
-    MEM_CNTRL0_ID, /* Maps to HN-F logical node 1 */
-    MEM_CNTRL0_ID, /* Maps to HN-F logical node 2 */
-    MEM_CNTRL0_ID, /* Maps to HN-F logical node 3 */
-    MEM_CNTRL1_ID, /* Maps to HN-F logical node 0 */
-    MEM_CNTRL1_ID, /* Maps to HN-F logical node 1 */
-    MEM_CNTRL1_ID, /* Maps to HN-F logical node 2 */
-    MEM_CNTRL1_ID, /* Maps to HN-F logical node 3 */
-    MEM_CNTRL2_ID, /* Maps to HN-F logical node 0 */
-    MEM_CNTRL2_ID, /* Maps to HN-F logical node 1 */
-    MEM_CNTRL2_ID, /* Maps to HN-F logical node 2 */
-    MEM_CNTRL2_ID, /* Maps to HN-F logical node 3 */
-    MEM_CNTRL3_ID, /* Maps to HN-F logical node 0 */
-    MEM_CNTRL3_ID, /* Maps to HN-F logical node 1 */
-    MEM_CNTRL3_ID, /* Maps to HN-F logical node 2 */
-    MEM_CNTRL3_ID, /* Maps to HN-F logical node 3 */
+    MEM_CNTRL0_ID, /* Maps to HN-F logical node 0  */
+    MEM_CNTRL0_ID, /* Maps to HN-F logical node 1  */
+    MEM_CNTRL0_ID, /* Maps to HN-F logical node 2  */
+    MEM_CNTRL0_ID, /* Maps to HN-F logical node 3  */
+    MEM_CNTRL1_ID, /* Maps to HN-F logical node 4  */
+    MEM_CNTRL1_ID, /* Maps to HN-F logical node 5  */
+    MEM_CNTRL1_ID, /* Maps to HN-F logical node 6  */
+    MEM_CNTRL1_ID, /* Maps to HN-F logical node 7  */
+    MEM_CNTRL2_ID, /* Maps to HN-F logical node 8  */
+    MEM_CNTRL2_ID, /* Maps to HN-F logical node 9  */
+    MEM_CNTRL2_ID, /* Maps to HN-F logical node 10 */
+    MEM_CNTRL2_ID, /* Maps to HN-F logical node 11 */
+    MEM_CNTRL3_ID, /* Maps to HN-F logical node 12 */
+    MEM_CNTRL3_ID, /* Maps to HN-F logical node 13 */
+    MEM_CNTRL3_ID, /* Maps to HN-F logical node 14 */
+    MEM_CNTRL3_ID, /* Maps to HN-F logical node 15 */
 };
 
 static const struct mod_cmn_rhodes_mem_region_map mmap[] = {
@@ -63,7 +70,7 @@ static const struct mod_cmn_rhodes_mem_region_map mmap[] = {
     },
     {
         /*
-         * Peripherals
+         * NOR Flash
          * Map: 0x00_0800_0000 - 0x00_0FFF_FFFF (128 MB)
          */
         .base = UINT64_C(0x0008000000),
@@ -103,19 +110,32 @@ static const struct mod_cmn_rhodes_mem_region_map mmap[] = {
     },
 };
 
+static const struct fwk_element cmn_rhodes_device_table[] = {
+    [0] = {
+        .name = "Chip-0 CMN-Rhodes Mesh Config",
+        .data = &((struct mod_cmn_rhodes_config) {
+                .base = SCP_CMN_RHODES_BASE,
+                .mesh_size_x = 3,
+                .mesh_size_y = 5,
+                .hnd_node_id = NODE_ID_HND,
+                .snf_table = snf_table,
+                .snf_count = FWK_ARRAY_SIZE(snf_table),
+                .mmap_table = mmap,
+                .mmap_count = FWK_ARRAY_SIZE(mmap),
+                .chip_addr_space = UINT64_C(4) * FWK_TIB,
+                .clock_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_CLOCK,
+                    CLOCK_IDX_INTERCONNECT),
+                .hnf_cal_mode = true,
+            })
+    },
+    [1] = { 0 }
+};
+
+static const struct fwk_element *cmn_rhodes_get_device_table(fwk_id_t module_id)
+{
+    return cmn_rhodes_device_table;
+}
+
 const struct fwk_module_config config_cmn_rhodes = {
-    .get_element_table = NULL,
-    .data = &((struct mod_cmn_rhodes_config) {
-        .base = SCP_CMN_RHODES_BASE,
-        .mesh_size_x = 3,
-        .mesh_size_y = 5,
-        .hnd_node_id = NODE_ID_HND,
-        .snf_table = snf_table,
-        .snf_count = FWK_ARRAY_SIZE(snf_table),
-        .mmap_table = mmap,
-        .mmap_count = FWK_ARRAY_SIZE(mmap),
-        .clock_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_CLOCK,
-            CLOCK_IDX_INTERCONNECT),
-        .hnf_cal_mode = true,
-    }),
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(cmn_rhodes_get_device_table),
 };

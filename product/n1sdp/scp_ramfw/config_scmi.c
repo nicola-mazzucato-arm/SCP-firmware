@@ -5,15 +5,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "n1sdp_scp_scmi.h"
+
+#include <mod_scmi.h>
+#include <mod_smt.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_scmi.h>
-#include <internal/scmi.h>
-#include <mod_smt.h>
-#include <n1sdp_scp_scmi.h>
 
 static const struct fwk_element service_table[] = {
     [SCP_N1SDP_SCMI_SERVICE_IDX_PSCI] = {
@@ -29,6 +30,7 @@ static const struct fwk_element service_table[] = {
                 FWK_MODULE_IDX_SMT,
                 MOD_SMT_NOTIFICATION_IDX_INITIALIZED),
             .scmi_agent_id = SCP_SCMI_AGENT_ID_PSCI,
+            .scmi_p2a_id = FWK_ID_NONE_INIT,
         }),
     },
     [SCP_N1SDP_SCMI_SERVICE_IDX_OSPM] = {
@@ -44,6 +46,7 @@ static const struct fwk_element service_table[] = {
                 FWK_MODULE_IDX_SMT,
                 MOD_SMT_NOTIFICATION_IDX_INITIALIZED),
             .scmi_agent_id = SCP_SCMI_AGENT_ID_OSPM,
+            .scmi_p2a_id = FWK_ID_NONE_INIT,
         }),
     },
     [SCP_N1SDP_SCMI_SERVICE_IDX_MCP] = {
@@ -57,6 +60,7 @@ static const struct fwk_element service_table[] = {
                 MOD_SMT_API_IDX_SCMI_TRANSPORT),
             .transport_notification_init_id = FWK_ID_NONE_INIT,
             .scmi_agent_id = SCP_SCMI_AGENT_ID_MCP,
+            .scmi_p2a_id = FWK_ID_NONE_INIT,
         }),
     },
     [SCP_N1SDP_SCMI_SERVICE_IDX_COUNT] = { 0 }
@@ -83,12 +87,14 @@ static struct mod_scmi_agent agent_table[] = {
 };
 
 const struct fwk_module_config config_scmi = {
-    .get_element_table = get_service_table,
-    .data = &((struct mod_scmi_config) {
-        .protocol_count_max = 8,
-        .agent_count = FWK_ARRAY_SIZE(agent_table) - 1,
-        .agent_table = agent_table,
-        .vendor_identifier = "arm",
-        .sub_vendor_identifier = "arm",
-    }),
+    .data =
+        &(struct mod_scmi_config){
+            .protocol_count_max = 8,
+            .agent_count = FWK_ARRAY_SIZE(agent_table) - 1,
+            .agent_table = agent_table,
+            .vendor_identifier = "arm",
+            .sub_vendor_identifier = "arm",
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_service_table),
 };

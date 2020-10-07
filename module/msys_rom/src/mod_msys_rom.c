@@ -10,14 +10,16 @@
  */
 
 #include <mod_bootloader.h>
-#include <mod_log.h>
 #include <mod_msys_rom.h>
 #include <mod_power_domain.h>
 #include <mod_ppu_v1.h>
 
 #include <fwk_assert.h>
+#include <fwk_event.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
 #include <fwk_module.h>
-#include <fwk_noreturn.h>
+#include <fwk_module_idx.h>
 #include <fwk_notification.h>
 #include <fwk_status.h>
 #include <fwk_thread.h>
@@ -27,7 +29,6 @@
 
 struct msys_rom_ctx {
     const struct msys_rom_config *rom_config;
-    struct mod_log_api *log_api;
     struct ppu_v1_boot_api *ppu_boot_api;
     struct mod_bootloader_api *bootloader_api;
     unsigned int notification_count; /* Notifications awaiting a response */
@@ -51,14 +52,11 @@ static int msys_deferred_setup(void)
     ctx.ppu_boot_api->power_mode_on(ctx.rom_config->id_primary_cluster);
     ctx.ppu_boot_api->power_mode_on(ctx.rom_config->id_primary_core);
 
-    ctx.log_api->log(MOD_LOG_GROUP_INFO, "[SYSTEM] Primary CPU powered\n");
-
     status = ctx.bootloader_api->load_image();
 
-    ctx.log_api->log(
-        MOD_LOG_GROUP_ERROR,
-        "[SYSTEM] Failed to load RAM firmware image: %d\n",
-        status);
+    FWK_LOG_CRIT(
+        "[MSYS-ROM] Failed to load RAM firmware image: %s",
+        fwk_status_str(status));
 
     return FWK_E_DATA;
 }
@@ -85,14 +83,6 @@ static int msys_rom_bind(fwk_id_t id, unsigned int round)
 
     /* Use second round only (round numbering is zero-indexed) */
     if (round == 1) {
-
-        /* Bind to the log component */
-        status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-                                 FWK_ID_API(FWK_MODULE_IDX_LOG, 0),
-                                 &ctx.log_api);
-
-        if (status != FWK_SUCCESS)
-            return FWK_E_PANIC;
 
         /* Bind to the PPU module */
         status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_PPU_V1),
@@ -157,12 +147,13 @@ static int msys_rom_process_notification(
     const struct fwk_event *event,
     struct fwk_event *resp_event)
 {
-    assert(fwk_id_is_equal(event->id, mod_msys_rom_notification_id_systop));
-    assert(event->is_response == true);
+    fwk_assert(
+        fwk_id_is_equal(event->id, mod_msys_rom_notification_id_systop));
+    fwk_assert(event->is_response == true);
 
     /* At least one notification response must be outstanding */
     if (ctx.notification_count == 0) {
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PANIC;
     }
 

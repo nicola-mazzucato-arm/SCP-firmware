@@ -5,14 +5,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config_ppu_v0.h"
+
+#include <mod_power_domain.h>
+#include <mod_synquacer_system.h>
+#include <mod_system_power.h>
+
+#include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_interrupt.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_synquacer_system.h>
-#include <mod_system_power.h>
-#include <config_ppu_v0.h>
+
+#include <stdint.h>
 
 static const struct mod_system_power_ext_ppu_config ext_ppus[] = {
     {
@@ -78,15 +84,16 @@ static const struct fwk_element *system_power_get_element_table(
 }
 
 const struct fwk_module_config config_system_power = {
-    .data = &((struct mod_system_power_config) {
-        .soc_wakeup_irq = FWK_INTERRUPT_NONE,
-        .ext_ppus = ext_ppus,
-        .ext_ppus_count = FWK_ARRAY_SIZE(ext_ppus),
-        .initial_system_power_state = MOD_PD_STATE_ON,
-        .driver_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_SYNQUACER_SYSTEM),
-        .driver_api_id = FWK_ID_API_INIT(
-            FWK_MODULE_IDX_SYNQUACER_SYSTEM,
-            MOD_SYNQUACER_SYSTEM_API_IDX_SYSTEM_POWER_DRIVER)
-    }),
-    .get_element_table = system_power_get_element_table,
+    .data =
+        &(struct mod_system_power_config){
+            .soc_wakeup_irq = FWK_INTERRUPT_NONE,
+            .ext_ppus = ext_ppus,
+            .ext_ppus_count = FWK_ARRAY_SIZE(ext_ppus),
+            .initial_system_power_state = MOD_PD_STATE_ON,
+            .driver_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_SYNQUACER_SYSTEM),
+            .driver_api_id = FWK_ID_API_INIT(
+                FWK_MODULE_IDX_SYNQUACER_SYSTEM,
+                MOD_SYNQUACER_SYSTEM_API_IDX_SYSTEM_POWER_DRIVER) },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(system_power_get_element_table),
 };

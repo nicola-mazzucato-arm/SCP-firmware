@@ -8,16 +8,17 @@
  *     SGM775 DDR-PHY500 module
  */
 
-#include <fwk_assert.h>
-#include <fwk_id.h>
-#include <fwk_mm.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <fwk_status.h>
 #include <mod_sgm775_ddr_phy500.h>
 #include <mod_sgm775_dmc500.h>
 
-static struct mod_log_api *log_api;
+#include <fwk_assert.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+#include <fwk_status.h>
+
+#include <stddef.h>
 
 /*
  * Functions fulfilling this module's interface
@@ -31,8 +32,7 @@ static int sgm775_ddr_phy500_config(fwk_id_t element_id)
 
     ddr = (struct mod_sgm775_ddr_phy500_reg *)element_config->ddr;
 
-    log_api->log(MOD_LOG_GROUP_DEBUG,
-        "[DDR] Initializing PHY at 0x%x\n", (uintptr_t) ddr);
+    FWK_LOG_INFO("[DDR] Initializing PHY at 0x%x", (uintptr_t)ddr);
 
     ddr->T_CTRL_DELAY   = 0x00000000;
     ddr->READ_DELAY     = 0x00000003;
@@ -70,27 +70,6 @@ static int sgm775_ddr_phy500_element_init(fwk_id_t element_id,
     return FWK_SUCCESS;
 }
 
-static int sgm775_ddr_phy500_bind(fwk_id_t id, unsigned int round)
-{
-    int status;
-
-    /* Skip the second round */
-    if (round == 1)
-        return FWK_SUCCESS;
-
-    /* Nothing to be done for element-level binding */
-    if (fwk_module_is_valid_element_id(id))
-        return FWK_SUCCESS;
-
-    /* Bind to the log module */
-    status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG), MOD_LOG_API_ID,
-        &log_api);
-    if (status != FWK_SUCCESS)
-        return status;
-
-    return FWK_SUCCESS;
-}
-
 static int sgm775_ddr_phy500_process_bind_request(fwk_id_t requester_id,
     fwk_id_t id, fwk_id_t api_id, const void **api)
 {
@@ -108,7 +87,6 @@ const struct fwk_module module_sgm775_ddr_phy500 = {
     .type = FWK_MODULE_TYPE_DRIVER,
     .init = sgm775_ddr_phy500_init,
     .element_init = sgm775_ddr_phy500_element_init,
-    .bind = sgm775_ddr_phy500_bind,
     .process_bind_request = sgm775_ddr_phy500_process_bind_request,
     .api_count = 1,
 };

@@ -5,9 +5,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <setjmp.h>
-#include <stdbool.h>
-#include <stdlib.h>
+#include <internal/fwk_module.h>
+#include <internal/fwk_single_thread.h>
+#include <internal/fwk_thread.h>
+
 #include <fwk_assert.h>
 #include <fwk_id.h>
 #include <fwk_list.h>
@@ -15,9 +16,10 @@
 #include <fwk_slist.h>
 #include <fwk_status.h>
 #include <fwk_test.h>
-#include <internal/fwk_module.h>
-#include <internal/fwk_single_thread.h>
-#include <internal/fwk_thread.h>
+
+#include <setjmp.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
 /* Mock functions */
 static void * fwk_mm_calloc_val;
@@ -41,7 +43,7 @@ void *__wrap_fwk_mm_calloc(size_t num, size_t size)
 
 static struct fwk_module_ctx fake_module_ctx;
 static struct fwk_dlist fake_module_dlist_table[4];
-struct fwk_module_ctx *__wrap___fwk_module_get_ctx(fwk_id_t id)
+struct fwk_module_ctx *__wrap_fwk_module_get_ctx(fwk_id_t id)
 {
     fake_module_ctx.subscription_dlist_table = fake_module_dlist_table;
     return &fake_module_ctx;
@@ -49,7 +51,7 @@ struct fwk_module_ctx *__wrap___fwk_module_get_ctx(fwk_id_t id)
 
 static struct fwk_element_ctx fake_element_ctx;
 static struct fwk_dlist fake_element_dlist_table[4];
-struct fwk_element_ctx *__wrap___fwk_module_get_element_ctx(fwk_id_t id)
+struct fwk_element_ctx *__wrap_fwk_module_get_element_ctx(fwk_id_t id)
 {
     fake_element_ctx.subscription_dlist_table = fake_element_dlist_table;
     return &fake_element_ctx;
@@ -123,37 +125,9 @@ static void test_case_teardown(void)
     __fwk_notification_reset();
 }
 
-static void test___fwk_notification_init(void)
-{
-    int result;
-    size_t notification_count = 4;
-
-    fwk_mm_calloc_return_val = true;
-
-    /* Insert 2 events in the list */
-    result = __fwk_notification_init(notification_count);
-    assert(result == FWK_SUCCESS);
-    assert(fwk_mm_calloc_num == notification_count);
-    assert(fwk_mm_calloc_size ==
-           sizeof(struct __fwk_notification_subscription));
-}
-
 static void test_fwk_notification_subscribe(void)
 {
     int result;
-    struct __fwk_notification_subscription *subscription1, *subscription2;
-
-    /* Notifications not initialized */
-    result = fwk_notification_subscribe(FWK_ID_NOTIFICATION(0x2, 0x3),
-                                        FWK_ID_ELEMENT(0x2, 0x9),
-                                        FWK_ID_MODULE(0x4));
-    assert(result == FWK_E_INIT);
-
-    /* Notifications initialization */
-    result = __fwk_notification_init(4);
-    assert(result == FWK_SUCCESS);
-    subscription1 = fwk_mm_calloc_val;
-    subscription2 = subscription1 + 1;
 
     /* Call from an ISR */
     interrupt_get_current_return_val = FWK_SUCCESS;
@@ -190,10 +164,6 @@ static void test_fwk_notification_subscribe(void)
                                         FWK_ID_ELEMENT(0x2, 0x9),
                                         FWK_ID_MODULE(0x4));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_element_dlist_table[3]),
-        struct fwk_event, slist_node) == (void *)subscription1);
-    assert(fwk_id_is_equal(subscription1->source_id, FWK_ID_ELEMENT(0x2, 0x9)));
-    assert(fwk_id_is_equal(subscription1->target_id, FWK_ID_MODULE(0x4)));
 
     /* Try to subscribe to the same element notification */
     result = fwk_notification_subscribe(FWK_ID_NOTIFICATION(0x2, 0x3),
@@ -206,11 +176,6 @@ static void test_fwk_notification_subscribe(void)
                                         FWK_ID_MODULE(0x2),
                                         FWK_ID_ELEMENT(0x4, 0x15));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_module_dlist_table[1]),
-        struct fwk_event, slist_node) == (void *)subscription2);
-    assert(fwk_id_is_equal(subscription2->source_id, FWK_ID_MODULE(0x2)));
-    assert(fwk_id_is_equal(subscription2->target_id,
-                           FWK_ID_ELEMENT(0x4, 0x15)));
 
     /* Try to subscribe to the same module notification */
     result = fwk_notification_subscribe(FWK_ID_NOTIFICATION(0x2, 0x1),
@@ -222,21 +187,6 @@ static void test_fwk_notification_subscribe(void)
 static void test_fwk_notification_unsubscribe(void)
 {
     int result;
-    struct __fwk_notification_subscription *subscription1, *subscription2,
-        *subscription3;
-
-    /* Notifications not initialized */
-    result = fwk_notification_unsubscribe(FWK_ID_NOTIFICATION(0x2, 0x3),
-                                          FWK_ID_ELEMENT(0x2, 0x9),
-                                          FWK_ID_MODULE(0x4));
-    assert(result == FWK_E_INIT);
-
-    /* Notifications initialization */
-    result = __fwk_notification_init(3);
-    assert(result == FWK_SUCCESS);
-    subscription1 = fwk_mm_calloc_val;
-    subscription2 = subscription1 + 1;
-    subscription3 = subscription2 + 1;
 
     /* Call from an ISR */
     interrupt_get_current_return_val = FWK_SUCCESS;
@@ -273,25 +223,18 @@ static void test_fwk_notification_unsubscribe(void)
                                         FWK_ID_ELEMENT(0x2, 0x9),
                                         FWK_ID_MODULE(0x4));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_element_dlist_table[1]),
-        struct fwk_event, slist_node) == (void *)subscription1);
 
     /* Subscribe to the same element notification for another target */
     result = fwk_notification_subscribe(FWK_ID_NOTIFICATION(0x2, 0x1),
                                         FWK_ID_ELEMENT(0x2, 0x9),
                                         FWK_ID_ELEMENT(0x6, 0x1));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_element_dlist_table[1]),
-        struct fwk_event, slist_node) == (void *)subscription1);
-    assert(subscription1->dlist_node.next == &(subscription2->dlist_node));
 
     /* Subscribe to a module notification */
     result = fwk_notification_subscribe(FWK_ID_NOTIFICATION(0x2, 0x1),
                                         FWK_ID_MODULE(0x2),
                                         FWK_ID_ELEMENT(0x4, 0x15));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_module_dlist_table[1]),
-        struct fwk_event, slist_node) == (void *)subscription3);
 
     /* Unsubscribe to a notification that has not been subscribed to */
     result = fwk_notification_unsubscribe(FWK_ID_NOTIFICATION(0x2, 0x1),
@@ -307,8 +250,6 @@ static void test_fwk_notification_unsubscribe(void)
                                           FWK_ID_ELEMENT(0x2, 0x9),
                                           FWK_ID_MODULE(0x4));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_element_dlist_table[1]),
-        struct fwk_event, slist_node) == (void *)subscription2);
 
     /* Subscribe to another element notification, the subscription freed in the
        previous step is re-used */
@@ -316,8 +257,6 @@ static void test_fwk_notification_unsubscribe(void)
                                         FWK_ID_MODULE(0x2),
                                         FWK_ID_ELEMENT(0xC, 0xC));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_module_dlist_table[3]),
-        struct fwk_event, slist_node) == (void *)subscription1);
 }
 
 static void test_fwk_notification_notify(void)
@@ -325,21 +264,6 @@ static void test_fwk_notification_notify(void)
     int result;
     struct fwk_event notification_event, current_event;
     unsigned int count;
-    struct __fwk_notification_subscription *subscription1, *subscription2,
-        *subscription3;
-
-    /* Notifications not initialized */
-    notification_event.source_id = FWK_ID_ELEMENT(0x2, 0x9);
-    notification_event.id = FWK_ID_NOTIFICATION(0x2, 0x1);
-    result = fwk_notification_notify(&notification_event, &count);
-    assert(result == FWK_E_INIT);
-
-    /* Notifications initialization */
-    result = __fwk_notification_init(3);
-    assert(result == FWK_SUCCESS);
-    subscription1 = fwk_mm_calloc_val;
-    subscription2 = subscription1 + 1;
-    subscription3 = subscription2 + 1;
 
     /* Call from an ISR, invalid source identifier */
     interrupt_get_current_return_val = FWK_SUCCESS;
@@ -377,25 +301,18 @@ static void test_fwk_notification_notify(void)
                                         FWK_ID_ELEMENT(0x2, 0x9),
                                         FWK_ID_MODULE(0x4));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_element_dlist_table[1]),
-        struct fwk_event, slist_node) == (void *)subscription1);
 
     /* Subscribe to the same element notification for another target */
     result = fwk_notification_subscribe(FWK_ID_NOTIFICATION(0x2, 0x1),
                                         FWK_ID_ELEMENT(0x2, 0x9),
                                         FWK_ID_ELEMENT(0x6, 0x1));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_element_dlist_table[1]),
-        struct fwk_event, slist_node) == (void *)subscription1);
-    assert(subscription1->dlist_node.next == &(subscription2->dlist_node));
 
     /* Subscribe to a module notification */
     result = fwk_notification_subscribe(FWK_ID_NOTIFICATION(0x2, 0x1),
                                         FWK_ID_MODULE(0x2),
                                         FWK_ID_ELEMENT(0x4, 0x15));
     assert(result == FWK_SUCCESS);
-    assert(FWK_LIST_GET(fwk_list_head(&fake_module_dlist_table[1]),
-        struct fwk_event, slist_node) == (void *)subscription3);
 
     /* Send the notifications FWK_ID_NOTIFICATION(0x2, 0x1) from
        FWK_ID_ELEMENT(0x2, 0x9) */
@@ -441,7 +358,6 @@ static void test_fwk_notification_notify(void)
 }
 
 static const struct fwk_test_case_desc test_case_table[] = {
-    FWK_TEST_CASE(test___fwk_notification_init),
     FWK_TEST_CASE(test_fwk_notification_subscribe),
     FWK_TEST_CASE(test_fwk_notification_unsubscribe),
     FWK_TEST_CASE(test_fwk_notification_notify)

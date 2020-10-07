@@ -5,12 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config_clock.h"
+#include "scp_rdn1e1_mmap.h"
+
+#include <mod_cmn600.h>
+
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_cmn600.h>
-#include <scp_rdn1e1_mmap.h>
-#include <config_clock.h>
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #define ROOT_NODE_OFFSET 0xD00000
 
@@ -52,7 +59,7 @@ static const struct mod_cmn600_memory_region_map mmap[] = {
     },
     {
         /*
-         * Peripherals
+         * NOR Flash
          * Map: 0x00_0800_0000 - 0x00_0FFF_FFFF (128 MB)
          */
         .base = UINT64_C(0x0008000000),
@@ -103,7 +110,6 @@ static const struct mod_cmn600_memory_region_map mmap[] = {
 };
 
 const struct fwk_module_config config_cmn600 = {
-    .get_element_table = NULL,
     .data = &((struct mod_cmn600_config) {
         .base = SCP_CMN600_BASE,
         .mesh_size_x = 4,

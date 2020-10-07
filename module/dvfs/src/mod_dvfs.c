@@ -5,22 +5,22 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdbool.h>
+#include <mod_clock.h>
+#include <mod_dvfs.h>
+#include <mod_psu.h>
+#include <mod_timer.h>
+
 #include <fwk_assert.h>
+#include <fwk_event.h>
 #include <fwk_id.h>
-#include <fwk_macros.h>
+#include <fwk_interrupt.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#ifdef BUILD_HAS_MULTITHREADING
-#include <fwk_multi_thread.h>
-#endif
-#include <fwk_notification.h>
-#include <mod_clock.h>
-#include <mod_dvfs.h>
-#include <mod_power_domain.h>
-#include <mod_psu.h>
-#include <mod_timer.h>
+#include <fwk_status.h>
+#include <fwk_thread.h>
+
+#include <stdbool.h>
 
 /*
  * Maximum number of attempts to complete a request
@@ -70,6 +70,9 @@ struct mod_dvfs_request {
     /* New operating point data for the request */
     struct mod_dvfs_opp new_opp;
 
+    /* Context-specific value */
+    uintptr_t cookie;
+
     /* Response expected for this request */
     bool response_required;
 
@@ -103,6 +106,8 @@ struct mod_dvfs_domain_ctx {
         /* Alarm API for pending requests */
         const struct mod_timer_alarm_api *alarm_api;
 
+        /* DVFS perf updates notification API */
+        struct mod_dvfs_perf_updated_api *perf_updated_api;
     } apis;
 
     /* Number of operating points */
@@ -111,8 +116,8 @@ struct mod_dvfs_domain_ctx {
     /* Current operating point */
     struct mod_dvfs_opp current_opp;
 
-    /* Current frequency limits */
-    struct mod_dvfs_frequency_limits frequency_limits;
+    /* Current level limits */
+    struct mod_dvfs_level_limits level_limits;
 
     /* Current request details */
     struct mod_dvfs_request request;
@@ -133,6 +138,9 @@ struct mod_dvfs_domain_ctx {
 struct mod_dvfs_ctx {
     /* Number of DVFS domains */
     uint32_t dvfs_domain_element_count;
+
+    /* DVFS config data */
+    struct mod_dvfs_config *config;
 
     /* DVFS device context table */
     struct mod_dvfs_domain_ctx (*domain_ctx)[];
@@ -155,35 +163,45 @@ static int count_opps(const struct mod_dvfs_opp *opps)
 {
     const struct mod_dvfs_opp *opp = &opps[0];
 
-    while ((opp->voltage != 0) && (opp->frequency != 0))
+    while ((opp->level != 0) && (opp->voltage != 0) && (opp->frequency != 0))
         opp++;
 
     return opp - &opps[0];
 }
 
-static const struct mod_dvfs_opp *get_opp_for_values(
+static const struct mod_dvfs_opp *get_opp_for_level(
     const struct mod_dvfs_domain_ctx *ctx,
-    uint64_t frequency,
-    uint64_t voltage)
+    uint32_t level)
 {
     size_t opp_idx;
     const struct mod_dvfs_opp *opp;
 
-    /*
-     * If both parameters are zero we have nothing to do.
-     */
-    if ((frequency == 0) && (voltage == 0))
-        return NULL;
+    for (opp_idx = 0; opp_idx < ctx->opp_count; opp_idx++) {
+        opp = &ctx->config->opps[opp_idx];
+
+        if (ctx->config->approximate_level && (opp->level < level))
+            continue;
+        else if (opp->level != level)
+            continue;
+
+        return opp;
+    }
+    if (ctx->config->approximate_level)
+        return &ctx->config->opps[ctx->opp_count - 1];
+    return NULL;
+}
+
+static const struct mod_dvfs_opp *get_opp_for_voltage(
+    const struct mod_dvfs_domain_ctx *ctx,
+    uint32_t voltage)
+{
+    size_t opp_idx;
+    const struct mod_dvfs_opp *opp;
 
     for (opp_idx = 0; opp_idx < ctx->opp_count; opp_idx++) {
         opp = &ctx->config->opps[opp_idx];
 
-        /* Only check the frequency if requested */
-        if ((frequency != 0) && (opp->frequency != frequency))
-            continue;
-
-        /* Only check the voltage if requested */
-        if ((voltage != 0) && (opp->voltage != voltage))
+        if (opp->voltage != voltage)
             continue;
 
         return opp;
@@ -192,23 +210,24 @@ static const struct mod_dvfs_opp *get_opp_for_values(
     return NULL;
 }
 
-static bool is_opp_within_limits(const struct mod_dvfs_opp *opp,
-    const struct mod_dvfs_frequency_limits *limits)
+static bool is_opp_within_limits(
+    const struct mod_dvfs_opp *opp,
+    const struct mod_dvfs_level_limits *limits)
 {
-    return (opp->frequency >= limits->minimum) &&
-           (opp->frequency <= limits->maximum);
+    return (opp->level >= limits->minimum) && (opp->level <= limits->maximum);
 }
 
-static bool are_limits_valid(const struct mod_dvfs_domain_ctx *ctx,
-    const struct mod_dvfs_frequency_limits *limits)
+static bool are_limits_valid(
+    const struct mod_dvfs_domain_ctx *ctx,
+    const struct mod_dvfs_level_limits *limits)
 {
     if (limits->minimum > limits->maximum)
         return false;
 
-    if (get_opp_for_values(ctx, limits->minimum, 0) == NULL)
+    if (get_opp_for_level(ctx, limits->minimum) == NULL)
         return false;
 
-    if (get_opp_for_values(ctx, limits->maximum, 0) == NULL)
+    if (get_opp_for_level(ctx, limits->maximum) == NULL)
         return false;
 
     return true;
@@ -217,20 +236,20 @@ static bool are_limits_valid(const struct mod_dvfs_domain_ctx *ctx,
 static const struct mod_dvfs_opp *adjust_opp_for_new_limits(
     const struct mod_dvfs_domain_ctx *ctx,
     const struct mod_dvfs_opp *opp,
-    const struct mod_dvfs_frequency_limits *limits)
+    const struct mod_dvfs_level_limits *limits)
 {
-    uint64_t needle;
+    uint32_t needle;
 
-    if (opp->frequency < limits->minimum)
+    if (opp->level < limits->minimum)
         needle = limits->minimum;
-    else if (opp->frequency > limits->maximum)
+    else if (opp->level > limits->maximum)
         needle = limits->maximum;
     else {
         /* No transition necessary */
         return opp;
     }
 
-    return get_opp_for_values(ctx, needle, 0);
+    return get_opp_for_level(ctx, needle);
 }
 
 /*
@@ -256,11 +275,14 @@ static int put_event_request(struct mod_dvfs_domain_ctx *ctx,
     return fwk_thread_put_event(&req);
 }
 
-static int dvfs_set_frequency_start(struct mod_dvfs_domain_ctx *ctx,
+static int dvfs_set_level_start(
+    struct mod_dvfs_domain_ctx *ctx,
+    uintptr_t cookie,
     const struct mod_dvfs_opp *new_opp,
     bool retry_request,
     uint8_t num_retries)
 {
+    ctx->request.cookie = cookie,
     ctx->request.new_opp = *new_opp;
     ctx->request.retry_request = retry_request;
     ctx->request.response_required = false;
@@ -277,7 +299,10 @@ static void dvfs_flush_pending_request(struct mod_dvfs_domain_ctx *ctx)
 {
     if (ctx->request_pending) {
         ctx->request_pending = false;
-        dvfs_set_frequency_start(ctx, &ctx->pending_request.new_opp,
+        dvfs_set_level_start(
+            ctx,
+            ctx->pending_request.cookie,
+            &ctx->pending_request.new_opp,
             ctx->pending_request.retry_request,
             ctx->pending_request.num_retries);
     }
@@ -324,7 +349,8 @@ static int dvfs_handle_pending_request(struct mod_dvfs_domain_ctx *ctx)
 }
 
 static int dvfs_create_pending_level_request(struct mod_dvfs_domain_ctx *ctx,
-    const struct mod_dvfs_opp *new_opp, bool retry_request)
+    uintptr_t cookie, const struct mod_dvfs_opp *new_opp,
+    bool retry_request)
 {
 
     if (ctx->request_pending) {
@@ -350,7 +376,7 @@ static int dvfs_create_pending_level_request(struct mod_dvfs_domain_ctx *ctx,
      */
     if (retry_request)
         ctx->pending_request.retry_request = retry_request;
-
+    ctx->pending_request.cookie = cookie;
     return FWK_SUCCESS;
 }
 
@@ -394,6 +420,34 @@ static int dvfs_get_nth_opp(fwk_id_t domain_id,
     return FWK_SUCCESS;
 }
 
+static int dvfs_get_level_id(
+    fwk_id_t domain_id,
+    uint32_t level,
+    size_t *level_id)
+{
+    const struct mod_dvfs_domain_ctx *ctx;
+    size_t idx;
+
+    ctx = get_domain_ctx(domain_id);
+    if (ctx == NULL)
+        return FWK_E_PARAM;
+
+    /*
+     * When the setup code forces platform to provide frequency array
+     * sorted, then this code can be changed to bisect search in order
+     * to speed-up.
+     */
+    for (idx = 0; idx < ctx->opp_count; idx++) {
+        const struct mod_dvfs_opp *opp = &ctx->config->opps[idx];
+        if (opp->level == level) {
+            *level_id = idx;
+            return FWK_SUCCESS;
+        }
+    }
+
+    return FWK_E_PARAM;
+}
+
 static int dvfs_get_opp_count(fwk_id_t domain_id, size_t *opp_count)
 {
     const struct mod_dvfs_domain_ctx *ctx;
@@ -426,8 +480,9 @@ static int dvfs_get_latency(fwk_id_t domain_id, uint16_t *latency)
     return FWK_SUCCESS;
 }
 
-static int dvfs_get_frequency_limits(fwk_id_t domain_id,
-    struct mod_dvfs_frequency_limits *limits)
+static int dvfs_get_level_limits(
+    fwk_id_t domain_id,
+    struct mod_dvfs_level_limits *limits)
 {
     struct mod_dvfs_domain_ctx *ctx;
 
@@ -438,7 +493,7 @@ static int dvfs_get_frequency_limits(fwk_id_t domain_id,
     if (ctx == NULL)
         return FWK_E_PARAM;
 
-    *limits = ctx->frequency_limits;
+    *limits = ctx->level_limits;
     return FWK_SUCCESS;
 }
 
@@ -457,7 +512,8 @@ static int dvfs_get_current_opp(fwk_id_t domain_id, struct mod_dvfs_opp *opp)
     if (ctx == NULL)
         return FWK_E_PARAM;
 
-    if (ctx->current_opp.frequency != 0) {
+    if (ctx->current_opp.level != 0) {
+        opp->level = ctx->current_opp.level;
         opp->frequency = ctx->current_opp.frequency;
         opp->voltage = ctx->current_opp.voltage;
         return FWK_SUCCESS;
@@ -484,38 +540,52 @@ static int dvfs_get_current_opp(fwk_id_t domain_id, struct mod_dvfs_opp *opp)
 /*
  * DVFS module asynchronous API functions
  */
-static int dvfs_set_frequency(fwk_id_t domain_id, uint64_t frequency)
+
+/*
+ * DVFS module asynchronous API functions
+ */
+static int dvfs_set_level(fwk_id_t domain_id, uintptr_t cookie, uint32_t level)
 {
     struct mod_dvfs_domain_ctx *ctx;
     const struct mod_dvfs_opp *new_opp;
+    unsigned int interrupt;
 
     ctx = get_domain_ctx(domain_id);
     if (ctx == NULL)
         return FWK_E_PARAM;
 
-    /* Only accept frequencies that exist in the operating point table */
-    new_opp = get_opp_for_values(ctx, frequency, 0);
+    /* Only accept levels that exist in the operating point table */
+    new_opp = get_opp_for_level(ctx, level);
     if (new_opp == NULL)
         return FWK_E_RANGE;
 
-    if (!is_opp_within_limits(new_opp, &ctx->frequency_limits))
+    if (!is_opp_within_limits(new_opp, &ctx->level_limits))
         return FWK_E_RANGE;
 
     if (ctx->state != DVFS_DOMAIN_STATE_IDLE)
-        return dvfs_create_pending_level_request(ctx, new_opp, false);
+        return dvfs_create_pending_level_request(ctx, cookie,
+            new_opp, false);
 
-    if ((new_opp->frequency == ctx->current_opp.frequency) &&
+    if ((new_opp->level == ctx->current_opp.level) &&
+        (new_opp->frequency == ctx->current_opp.frequency) &&
         (new_opp->voltage == ctx->current_opp.voltage))
         return FWK_SUCCESS;
 
-    return dvfs_set_frequency_start(ctx, new_opp, false, 0);
+    if (fwk_interrupt_get_current(&interrupt) == FWK_SUCCESS)
+        ctx->request.set_source_id = true;
+    else
+        ctx->request.set_source_id = false;
+    return dvfs_set_level_start(ctx, cookie, new_opp, false, 0);
 }
 
-static int dvfs_set_frequency_limits(fwk_id_t domain_id,
-    const struct mod_dvfs_frequency_limits *limits)
+static int dvfs_set_level_limits(
+    fwk_id_t domain_id,
+    uintptr_t cookie,
+    const struct mod_dvfs_level_limits *limits)
 {
     struct mod_dvfs_domain_ctx *ctx;
     const struct mod_dvfs_opp *new_opp;
+    unsigned int interrupt;
 
     ctx = get_domain_ctx(domain_id);
     if (ctx == NULL)
@@ -528,28 +598,42 @@ static int dvfs_set_frequency_limits(fwk_id_t domain_id,
     if (new_opp == NULL)
         return FWK_E_PARAM;
 
-    ctx->frequency_limits = *limits;
+    ctx->level_limits = *limits;
 
-    if ((new_opp->frequency == ctx->current_opp.frequency) &&
+    if ((new_opp->level == ctx->current_opp.level) &&
+        (new_opp->frequency == ctx->current_opp.frequency) &&
         (new_opp->voltage == ctx->current_opp.voltage)) {
         return FWK_SUCCESS;
     }
 
-    if (ctx->state != DVFS_DOMAIN_STATE_IDLE)
-        return dvfs_create_pending_level_request(ctx, new_opp, true);
+    /* notify the HAL that the limits have been updated */
+    if (ctx->apis.perf_updated_api) {
+        ctx->apis.perf_updated_api->notify_limits_updated(
+            ctx->domain_id, cookie, limits->minimum, limits->maximum);
+    }
 
-    return dvfs_set_frequency_start(ctx, new_opp, true, 0);
+    if (ctx->state != DVFS_DOMAIN_STATE_IDLE) {
+        return dvfs_create_pending_level_request(ctx, cookie,
+             new_opp, true);
+    }
+
+    if (fwk_interrupt_get_current(&interrupt) == FWK_SUCCESS)
+        ctx->request.set_source_id = true;
+    else
+        ctx->request.set_source_id = false;
+    return dvfs_set_level_start(ctx, cookie, new_opp, true, 0);
 }
 
 static const struct mod_dvfs_domain_api mod_dvfs_domain_api = {
     .get_current_opp = dvfs_get_current_opp,
     .get_sustained_opp = dvfs_get_sustained_opp,
     .get_nth_opp = dvfs_get_nth_opp,
+    .get_level_id = dvfs_get_level_id,
     .get_opp_count = dvfs_get_opp_count,
     .get_latency = dvfs_get_latency,
-    .set_frequency = dvfs_set_frequency,
-    .get_frequency_limits = dvfs_get_frequency_limits,
-    .set_frequency_limits = dvfs_set_frequency_limits,
+    .set_level = dvfs_set_level,
+    .get_level_limits = dvfs_get_level_limits,
+    .set_level_limits = dvfs_set_level_limits,
 };
 
 /*
@@ -586,7 +670,7 @@ static void dvfs_complete_respond(struct mod_dvfs_domain_ctx *ctx,
         if (status == FWK_SUCCESS) {
             resp_params->status = req_status;
             if (return_opp)
-                resp_params->performance_level = ctx->current_opp.frequency;
+                resp_params->performance_level = ctx->current_opp.level;
             fwk_thread_put_event(&read_req_event);
         }
         ctx->cookie = 0;
@@ -599,7 +683,7 @@ static void dvfs_complete_respond(struct mod_dvfs_domain_ctx *ctx,
             (struct mod_dvfs_params_response *)resp_event->params;
         resp_params->status = req_status;
         if (return_opp)
-            resp_params->performance_level = ctx->current_opp.frequency;
+            resp_params->performance_level = ctx->current_opp.level;
     }
 }
 
@@ -624,9 +708,18 @@ static int dvfs_complete(struct mod_dvfs_domain_ctx *ctx,
             ctx->pending_request.retry_request = ctx->request.retry_request;
             ctx->pending_request.num_retries = ctx->request.num_retries;
             if (!ctx->request_pending) {
+                ctx->pending_request.cookie = ctx->request.cookie;
                 ctx->pending_request.new_opp = ctx->request.new_opp;
                 ctx->request_pending = true;
             }
+        }
+    }
+
+    /* notify the HAL that the level has been updated */
+    if ((req_status == FWK_SUCCESS) && (ctx->state != DVFS_DOMAIN_GET_OPP)) {
+        if (ctx->apis.perf_updated_api) {
+            ctx->apis.perf_updated_api->notify_level_updated(
+                ctx->domain_id, ctx->request.cookie, ctx->current_opp.level);
         }
     }
 
@@ -654,8 +747,9 @@ static int dvfs_complete(struct mod_dvfs_domain_ctx *ctx,
  * The SET_OPP() request has successfully completed the first step,
  * reading the voltage.
  */
-static int dvfs_handle_set_opp(struct mod_dvfs_domain_ctx *ctx,
-    uint64_t voltage)
+static int dvfs_handle_set_opp(
+    struct mod_dvfs_domain_ctx *ctx,
+    uint32_t voltage)
 {
     int status = FWK_SUCCESS;
 
@@ -679,7 +773,7 @@ static int dvfs_handle_set_opp(struct mod_dvfs_domain_ctx *ctx,
          */
         status = ctx->apis.clock->set_rate(
             ctx->config->clock_id,
-            ctx->request.new_opp.frequency,
+            (uint64_t)ctx->request.new_opp.frequency * FWK_KHZ,
             MOD_CLOCK_ROUND_MODE_NONE);
 
         if (status == FWK_PENDING) {
@@ -692,7 +786,7 @@ static int dvfs_handle_set_opp(struct mod_dvfs_domain_ctx *ctx,
          */
         status = ctx->apis.clock->set_rate(
             ctx->config->clock_id,
-            ctx->request.new_opp.frequency,
+            (uint64_t)ctx->request.new_opp.frequency * FWK_KHZ,
             MOD_CLOCK_ROUND_MODE_NONE);
 
         if (status == FWK_PENDING) {
@@ -721,7 +815,7 @@ static int dvfs_handle_set_opp(struct mod_dvfs_domain_ctx *ctx,
          */
         status = ctx->apis.clock->set_rate(
             ctx->config->clock_id,
-            ctx->request.new_opp.frequency,
+            (uint64_t)ctx->request.new_opp.frequency * FWK_KHZ,
             MOD_CLOCK_ROUND_MODE_NONE);
 
         if (status == FWK_PENDING) {
@@ -745,10 +839,11 @@ static int dvfs_handle_set_opp(struct mod_dvfs_domain_ctx *ctx,
  * synchronously or asynchronously. Note that resp_event will only be set
  * by a GET_OPP(), it will always be NULL for SET_OPP().
  */
-static int dvfs_handle_psu_get_voltage_resp(struct mod_dvfs_domain_ctx *ctx,
+static int dvfs_handle_psu_get_voltage_resp(
+    struct mod_dvfs_domain_ctx *ctx,
     struct fwk_event *resp_event,
     int req_status,
-    uint64_t voltage)
+    uint32_t voltage)
 {
     const struct mod_dvfs_opp *opp;
 
@@ -762,18 +857,19 @@ static int dvfs_handle_psu_get_voltage_resp(struct mod_dvfs_domain_ctx *ctx,
      * We have the actual voltage, get the frequency from the
      * corresponding OPP in the domain context table.
      */
-    opp = get_opp_for_values(ctx, 0, voltage);
+    opp = get_opp_for_voltage(ctx, voltage);
     if (opp == NULL)
         return dvfs_complete(ctx, resp_event, FWK_E_DEVICE);
 
     /*
-     * We have successfully found the frequency, save it in the domain context.
+     * We have successfully found the level, save it in the domain context.
      */
     ctx->current_opp.voltage = voltage;
     ctx->current_opp.frequency = opp->frequency;
+    ctx->current_opp.level = opp->level;
 
     /*
-     * This is a GET_OPP(), we are done, return the frequency to caller
+     * This is a GET_OPP(), we are done, return the lvel to caller
      */
     return dvfs_complete(ctx, resp_event, FWK_SUCCESS);
 }
@@ -864,7 +960,7 @@ static int mod_dvfs_process_event(const struct fwk_event *event,
     int status = FWK_SUCCESS;
     struct mod_dvfs_domain_ctx *ctx;
     struct mod_psu_driver_response *psu_response;
-    uint64_t voltage;
+    uint32_t voltage;
 
     ctx = get_domain_ctx(event->target_id);
     if (ctx == NULL)
@@ -885,12 +981,15 @@ static int mod_dvfs_process_event(const struct fwk_event *event,
         /*
          * Handle get_voltage() synchronously
          */
-        return dvfs_handle_psu_get_voltage_resp(ctx,
+        status = dvfs_handle_psu_get_voltage_resp(ctx,
             resp_event, status, ctx->request.new_opp.voltage);
+        if (status == FWK_PENDING)
+            return FWK_SUCCESS;
+        return status;
     }
 
     /*
-     * local DVFS event from dvfs_set_frequency()
+     * local DVFS event from dvfs_set_level()
      */
     if (fwk_id_is_equal(event->id, mod_dvfs_event_id_set)) {
         if (ctx->current_opp.voltage != 0) {
@@ -906,8 +1005,11 @@ static int mod_dvfs_process_event(const struct fwk_event *event,
         /*
          * Handle get_voltage() synchronously
          */
-        return dvfs_handle_psu_get_voltage_resp(ctx, NULL,
+        status = dvfs_handle_psu_get_voltage_resp(ctx, NULL,
             status, voltage);
+        if (status == FWK_PENDING)
+            return FWK_SUCCESS;
+        return status;
     }
 
     /*
@@ -917,7 +1019,10 @@ static int mod_dvfs_process_event(const struct fwk_event *event,
     if (fwk_id_is_equal(event->id, mod_dvfs_event_id_retry)) {
         ctx->request.set_source_id = false;
         ctx->request_pending = false;
-        status = dvfs_set_frequency_start(ctx, &ctx->pending_request.new_opp,
+        status = dvfs_set_level_start(
+            ctx,
+            ctx->pending_request.cookie,
+            &ctx->pending_request.new_opp,
             ctx->pending_request.retry_request,
             ctx->pending_request.num_retries);
         ctx->pending_request = (struct mod_dvfs_request){ 0 };
@@ -933,8 +1038,11 @@ static int mod_dvfs_process_event(const struct fwk_event *event,
          * above so we can safely discard the resp_event.
          */
         psu_response = (struct mod_psu_driver_response *)event->params;
-        return dvfs_handle_psu_get_voltage_resp(ctx, NULL,
+        status = dvfs_handle_psu_get_voltage_resp(ctx, NULL,
             psu_response->status, psu_response->voltage);
+        if (status == FWK_PENDING)
+            return FWK_SUCCESS;
+        return status;
     }
 
     /*
@@ -945,18 +1053,24 @@ static int mod_dvfs_process_event(const struct fwk_event *event,
          * Handle set_voltage() asynchronously, no response required for
          * a SET_OPP() request so resp_event discarded.
          */
-        return dvfs_handle_psu_set_voltage_resp(ctx, event);
+        status = dvfs_handle_psu_set_voltage_resp(ctx, event);
+        if (status == FWK_PENDING)
+            return FWK_SUCCESS;
+        return status;
     }
 
     /*
      * response event from SET_OPP() Clock set_rate()
      */
-    if (fwk_id_is_equal(event->id, mod_clock_event_id_request)) {
+    if (fwk_id_is_equal(event->id, mod_clock_event_id_set_rate_request)) {
         /*
          * Handle set_frequency() asynchronously, no response required for
          * a SET_OPP() request so resp_event discarded.
          */
-        return dvfs_handle_clk_set_freq_resp(ctx, event);
+        status = dvfs_handle_clk_set_freq_resp(ctx, event);
+        if (status == FWK_PENDING)
+            return FWK_SUCCESS;
+        return status;
     }
 
     return FWK_E_PARAM;
@@ -983,7 +1097,7 @@ static int dvfs_start(fwk_id_t id)
     if (status == FWK_SUCCESS) {
         ctx = get_domain_ctx(id);
         ctx->request.set_source_id = true;
-        dvfs_set_frequency_start(ctx, &sustained_opp, true, 0);
+        dvfs_set_level_start(ctx, 0, &sustained_opp, true, 0);
     }
 
     return status;
@@ -995,6 +1109,7 @@ static int dvfs_init(fwk_id_t module_id, unsigned int element_count,
     dvfs_ctx.domain_ctx = fwk_mm_calloc(element_count,
         sizeof((*dvfs_ctx.domain_ctx)[0]));
 
+    dvfs_ctx.config = (struct mod_dvfs_config *)data;
     dvfs_ctx.dvfs_domain_element_count = element_count;
 
     return FWK_SUCCESS;
@@ -1019,10 +1134,10 @@ dvfs_element_init(fwk_id_t domain_id,
     ctx->opp_count = count_opps(ctx->config->opps);
     fwk_assert(ctx->opp_count > 0);
 
-    /* Frequency limits default to the minimum and maximum available */
-    ctx->frequency_limits = (struct mod_dvfs_frequency_limits) {
-        .minimum = ctx->config->opps[0].frequency,
-        .maximum = ctx->config->opps[ctx->opp_count - 1].frequency,
+    /* Level limits default to the minimum and maximum available */
+    ctx->level_limits = (struct mod_dvfs_level_limits){
+        .minimum = ctx->config->opps[0].level,
+        .maximum = ctx->config->opps[ctx->opp_count - 1].level,
     };
 
     return FWK_SUCCESS;
@@ -1033,10 +1148,6 @@ dvfs_bind_element(fwk_id_t domain_id, unsigned int round)
 {
     int status;
     const struct mod_dvfs_domain_ctx *ctx = get_domain_ctx(domain_id);
-
-    /* Only handle the first round */
-    if (round > 0)
-        return FWK_SUCCESS;
 
     /* Bind to the power supply module */
     status = fwk_module_bind(ctx->config->psu_id, mod_psu_api_id_device,
@@ -1049,6 +1160,16 @@ dvfs_bind_element(fwk_id_t domain_id, unsigned int round)
         FWK_ID_API(FWK_MODULE_IDX_CLOCK, 0), &ctx->apis.clock);
     if (status != FWK_SUCCESS)
         return FWK_E_PANIC;
+
+    /* Bind to a notification module if required */
+    if (!(fwk_id_is_equal(ctx->config->notification_id, FWK_ID_NONE))) {
+        status = fwk_module_bind(
+            ctx->config->notification_id,
+            ctx->config->updates_api_id,
+            &ctx->apis.perf_updated_api);
+        if (status != FWK_SUCCESS)
+            return FWK_E_PANIC;
+    }
 
     /* Bind to the alarm HAL if required */
     if (ctx->config->retry_ms > 0) {
@@ -1064,24 +1185,13 @@ dvfs_bind_element(fwk_id_t domain_id, unsigned int round)
 static int
 dvfs_bind(fwk_id_t id, unsigned int round)
 {
+    /* Only handle the first round */
+    if (round > 0)
+        return FWK_SUCCESS;
+
     /* Bind our elements */
     if (fwk_id_is_type(id, FWK_ID_TYPE_ELEMENT))
         return dvfs_bind_element(id, round);
-
-    return FWK_SUCCESS;
-}
-
-static int
-dvfs_process_bind_request_module(fwk_id_t source_id,
-    fwk_id_t api_id,
-    const void **api)
-{
-    /* Only expose the module API */
-    if (!fwk_id_is_equal(api_id, mod_dvfs_api_id_dvfs))
-        return FWK_E_PARAM;
-
-    /* We don't do any permissions management */
-    *api = &mod_dvfs_domain_api;
 
     return FWK_SUCCESS;
 }
@@ -1096,7 +1206,10 @@ dvfs_process_bind_request(fwk_id_t source_id,
     if (!fwk_id_is_equal(target_id, fwk_module_id_dvfs))
         return FWK_E_PARAM;
 
-    return dvfs_process_bind_request_module(source_id, api_id, api);
+    /* We don't do any permissions management */
+    *api = &mod_dvfs_domain_api;
+
+    return FWK_SUCCESS;
 }
 
 /* Module description */

@@ -9,13 +9,18 @@
 #
 
 BS_FIRMWARE_CPU := cortex-m3
-BS_FIRMWARE_HAS_MULTITHREADING := yes
+BS_FIRMWARE_HAS_MULTITHREADING := no
 BS_FIRMWARE_HAS_NOTIFICATION := yes
+BS_FIRMWARE_HAS_SCMI_NOTIFICATIONS := no
+BS_FIRMWARE_HAS_FAST_CHANNELS := no
+BS_FIRMWARE_HAS_RESOURCE_PERMISSIONS := yes
+BS_FIRMWARE_HAS_DEBUG_UNIT := yes
+BS_FIRMWARE_HAS_SCMI_RESET := no
+BS_FIRMWARE_HAS_STATISTICS := no
 
 BS_FIRMWARE_MODULE_HEADERS_ONLY :=
 
 BS_FIRMWARE_MODULES := \
-    log \
     pl011 \
     juno_soc_clock_ram \
     clock \
@@ -51,11 +56,22 @@ BS_FIRMWARE_MODULES := \
     juno_pvt \
     juno_thermal
 
+ifeq ($(BS_FIRMWARE_HAS_DEBUG_UNIT),yes)
+    BS_FIRMWARE_MODULES += juno_debug debug
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_SCMI_RESET),yes)
+    BS_FIRMWARE_MODULES += reset_domain scmi_reset_domain juno_reset_domain
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_RESOURCE_PERMISSIONS),yes)
+    BS_FIRMWARE_MODULES += resource_perms
+endif
+
 BS_FIRMWARE_SOURCES := \
-    rtx_config.c \
     juno_utils.c \
     config_sds.c \
-    config_log.c \
+    config_pl011.c \
     config_juno_soc_clock_ram.c \
     config_clock.c \
     config_dvfs.c \
@@ -83,6 +99,31 @@ BS_FIRMWARE_SOURCES := \
     config_psu.c \
     config_mock_psu.c \
     config_juno_pvt.c \
-    config_juno_thermal.c
+    config_juno_thermal.c \
+    config_scmi_power_domain.c \
+    juno_scmi_clock.c
+
+ifeq ($(BS_FIRMWARE_HAS_MULTITHREADING),yes)
+    BS_FIRMWARE_SOURCES += rtx_config.c
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_DEBUG_UNIT),yes)
+    BS_FIRMWARE_SOURCES += config_juno_debug.c config_debug.c
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_SCMI_RESET),yes)
+    BS_FIRMWARE_SOURCES += config_reset_domain.c \
+        config_scmi_reset_domain.c \
+        config_juno_reset_domain.c
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_STATISTICS),yes)
+    BS_FIRMWARE_MODULES += statistics
+    BS_FIRMWARE_SOURCES += config_stats.c
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_RESOURCE_PERMISSIONS),yes)
+    BS_FIRMWARE_SOURCES += config_resource_perms.c
+endif
 
 include $(BS_DIR)/firmware.mk

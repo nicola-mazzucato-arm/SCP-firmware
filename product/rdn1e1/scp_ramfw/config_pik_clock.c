@@ -5,15 +5,21 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config_clock.h"
+#include "rdn1e1_pik_cpu.h"
+#include "rdn1e1_pik_scp.h"
+#include "rdn1e1_pik_system.h"
+#include "scp_rdn1e1_pik.h"
+#include "system_clock.h"
+
+#include <mod_pik_clock.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
-#include <mod_pik_clock.h>
-#include <rdn1e1_pik_system.h>
-#include <scp_rdn1e1_pik.h>
-#include <system_clock.h>
-#include <config_clock.h>
+
+#include <stdbool.h>
 
 /*
  * Rate lookup tables
@@ -294,5 +300,5 @@ static const struct fwk_element *pik_clock_get_element_table
 }
 
 const struct fwk_module_config config_pik_clock = {
-    .get_element_table = pik_clock_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(pik_clock_get_element_table),
 };

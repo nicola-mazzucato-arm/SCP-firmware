@@ -8,20 +8,26 @@
  *     Power State Management PPU v0 driver.
  */
 
-#include <stdint.h>
-#include <fwk_id.h>
+#include <ppu_v0.h>
+
+#include <mod_power_domain.h>
+#include <mod_ppu_v0.h>
+
+#ifdef BUILD_HAS_MOD_SYSTEM_POWER
+#    include <mod_system_power.h>
+#endif
+
 #include <fwk_assert.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
 #include <fwk_macros.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_log.h>
-#include <mod_power_domain.h>
-#include <mod_ppu_v0.h>
-#include <ppu_v0.h>
-#if BUILD_HAS_MOD_SYSTEM_POWER
-#include <mod_system_power.h>
-#endif
+#include <fwk_status.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 /* Power domain context */
 struct ppu_v0_pd_ctx {
@@ -36,15 +42,15 @@ struct ppu_v0_pd_ctx {
 
     /* Power module driver input API */
     struct mod_pd_driver_input_api *pd_driver_input_api;
+
+    /* Timer context */
+    struct ppu_v0_timer_ctx *timer_ctx;
 };
 
 /* Module context */
 struct ppu_v0_ctx {
     /* Table of the power domain contexts */
     struct ppu_v0_pd_ctx *pd_ctx_table;
-
-    /* Log API */
-   struct mod_log_api *log_api;
 };
 
 /*
@@ -79,12 +85,11 @@ static int get_state(struct ppu_v0_reg *ppu, unsigned int *state)
                   "[MOD_PPU_V0] ppu_mode_to_power_state size error");
 
     ppu_v0_get_power_mode(ppu, &ppu_mode);
-    assert(ppu_mode < PPU_V0_MODE_COUNT);
+    fwk_assert(ppu_mode < PPU_V0_MODE_COUNT);
 
     *state = ppu_mode_to_power_state[ppu_mode];
     if (*state == MODE_UNSUPPORTED) {
-        ppu_v0_ctx.log_api->log(MOD_LOG_GROUP_ERROR,
-                                "[PD] Unexpected PPU mode (%i).\n", ppu_mode);
+        FWK_LOG_ERR("[PD] Unexpected PPU mode (%i).", ppu_mode);
         return FWK_E_DEVICE;
     }
 
@@ -109,22 +114,21 @@ static int pd_set_state(fwk_id_t pd_id, unsigned int state)
 
     switch (state) {
     case MOD_PD_STATE_ON:
-        ppu_v0_set_power_mode(pd_ctx->ppu, PPU_V0_MODE_ON);
+        ppu_v0_set_power_mode(pd_ctx->ppu, PPU_V0_MODE_ON, pd_ctx->timer_ctx);
         status = pd_ctx->pd_driver_input_api->report_power_state_transition(
             pd_ctx->bound_id, MOD_PD_STATE_ON);
-        assert(status == FWK_SUCCESS);
+        fwk_assert(status == FWK_SUCCESS);
         break;
 
     case MOD_PD_STATE_OFF:
-        ppu_v0_set_power_mode(pd_ctx->ppu, PPU_V0_MODE_OFF);
+        ppu_v0_set_power_mode(pd_ctx->ppu, PPU_V0_MODE_OFF, pd_ctx->timer_ctx);
         status = pd_ctx->pd_driver_input_api->report_power_state_transition(
             pd_ctx->bound_id, MOD_PD_STATE_OFF);
-        assert(status == FWK_SUCCESS);
+        fwk_assert(status == FWK_SUCCESS);
         break;
 
     default:
-        ppu_v0_ctx.log_api->log(MOD_LOG_GROUP_ERROR,
-            "[PD] Requested power state (%i) is not supported.\n", state);
+        FWK_LOG_ERR("[PD] Requested power state (%i) is not supported.", state);
         return FWK_E_PARAM;
     }
 
@@ -148,9 +152,11 @@ static int pd_reset(fwk_id_t pd_id)
     pd_ctx = ppu_v0_ctx.pd_ctx_table + fwk_id_get_element_idx(pd_id);
 
     /* Model does not support warm reset at the moment. Using OFF instead. */
-    status = ppu_v0_set_power_mode(pd_ctx->ppu, PPU_V0_MODE_OFF);
+    status =
+        ppu_v0_set_power_mode(pd_ctx->ppu, PPU_V0_MODE_OFF, pd_ctx->timer_ctx);
     if (status == FWK_SUCCESS)
-        status = ppu_v0_set_power_mode(pd_ctx->ppu, PPU_V0_MODE_ON);
+        status = ppu_v0_set_power_mode(
+            pd_ctx->ppu, PPU_V0_MODE_ON, pd_ctx->timer_ctx);
 
     return status;
 }
@@ -188,6 +194,24 @@ static int ppu_v0_pd_init(fwk_id_t pd_id, unsigned int unused, const void *data)
     pd_ctx->ppu = (struct ppu_v0_reg *)(config->ppu.reg_base);
     pd_ctx->bound_id = FWK_ID_NONE;
 
+#ifdef BUILD_HAS_MOD_TIMER
+    if (config->timer_config == NULL) {
+        pd_ctx->timer_ctx = NULL;
+    } else {
+        pd_ctx->timer_ctx = fwk_mm_calloc(1, sizeof(struct ppu_v0_timer_ctx));
+        if (pd_ctx->timer_ctx == NULL)
+            return FWK_E_NOMEM;
+        /* Check for valid timeout value if timer ID is specified */
+        if (config->timer_config->set_state_timeout_us == 0)
+            return FWK_E_PARAM;
+        /* Save the timer ID to pd context */
+        pd_ctx->timer_ctx->timer_id = config->timer_config->timer_id;
+        pd_ctx->timer_ctx->delay_us =
+            config->timer_config->set_state_timeout_us;
+    }
+#else
+    pd_ctx->timer_ctx = NULL;
+#endif
     switch (config->pd_type) {
     case MOD_PD_TYPE_DEVICE:
     case MOD_PD_TYPE_DEVICE_DEBUG:
@@ -197,8 +221,7 @@ static int ppu_v0_pd_init(fwk_id_t pd_id, unsigned int unused, const void *data)
             return status;
 
         if (config->default_power_on)
-            return ppu_v0_set_power_mode(pd_ctx->ppu, PPU_V0_MODE_ON);
-
+            return ppu_v0_set_power_mode(pd_ctx->ppu, PPU_V0_MODE_ON, NULL);
         return FWK_SUCCESS;
 
     default:
@@ -208,27 +231,35 @@ static int ppu_v0_pd_init(fwk_id_t pd_id, unsigned int unused, const void *data)
 
 static int ppu_v0_bind(fwk_id_t id, unsigned int round)
 {
+    int status = FWK_SUCCESS;
     struct ppu_v0_pd_ctx *pd_ctx;
-
     /* Nothing to do during the first round of calls where the power module
        will bind to the power domains of this module. */
     if (round == 0)
         return FWK_SUCCESS;
 
-    /* In the case of the module, bind to the log component */
-    if (fwk_module_is_valid_module_id(id)) {
-        return fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-                               FWK_ID_API(FWK_MODULE_IDX_LOG, 0),
-                               &ppu_v0_ctx.log_api);
-    }
+    if (fwk_id_is_type(id, FWK_ID_TYPE_MODULE))
+        return FWK_SUCCESS;
 
     pd_ctx = ppu_v0_ctx.pd_ctx_table + fwk_id_get_element_idx(id);
+
+#ifdef BUILD_HAS_MOD_TIMER
+    if (pd_ctx->timer_ctx != NULL) {
+        /* Bind to the timer */
+        status = fwk_module_bind(
+            pd_ctx->timer_ctx->timer_id,
+            MOD_TIMER_API_ID_TIMER,
+            &pd_ctx->timer_ctx->timer_api);
+        if (status != FWK_SUCCESS)
+            return status;
+    }
+#endif
 
     if (fwk_id_is_equal(pd_ctx->bound_id, FWK_ID_NONE))
         return FWK_SUCCESS;
 
     switch (fwk_id_get_module_idx(pd_ctx->bound_id)) {
-    #if BUILD_HAS_MOD_POWER_DOMAIN
+#ifdef BUILD_HAS_MOD_POWER_DOMAIN
     case FWK_MODULE_IDX_POWER_DOMAIN:
         return fwk_module_bind(pd_ctx->bound_id,
                                mod_pd_api_id_driver_input,
@@ -236,7 +267,7 @@ static int ppu_v0_bind(fwk_id_t id, unsigned int round)
         break;
     #endif
 
-    #if BUILD_HAS_MOD_SYSTEM_POWER
+#ifdef BUILD_HAS_MOD_SYSTEM_POWER
     case FWK_MODULE_IDX_SYSTEM_POWER:
         return fwk_module_bind(pd_ctx->bound_id,
                                mod_system_power_api_id_pd_driver_input,
@@ -245,9 +276,10 @@ static int ppu_v0_bind(fwk_id_t id, unsigned int round)
     #endif
 
     default:
-        assert(false);
+        fwk_unexpected();
         return FWK_E_SUPPORT;
     }
+    return status;
 }
 
 static int ppu_v0_process_bind_request(fwk_id_t source_id,
@@ -261,28 +293,28 @@ static int ppu_v0_process_bind_request(fwk_id_t source_id,
     switch (pd_ctx->config->pd_type) {
     case MOD_PD_TYPE_SYSTEM:
         if (!fwk_id_is_equal(pd_ctx->bound_id, FWK_ID_NONE)) {
-            assert(false);
+            fwk_unexpected();
             return FWK_E_ACCESS;
         }
     /* Fallthrough */
 
     case MOD_PD_TYPE_DEVICE:
     case MOD_PD_TYPE_DEVICE_DEBUG:
-        #if BUILD_HAS_MOD_POWER_DOMAIN
+#ifdef BUILD_HAS_MOD_POWER_DOMAIN
         if (fwk_id_get_module_idx(source_id) == FWK_MODULE_IDX_POWER_DOMAIN) {
             pd_ctx->bound_id = source_id;
             *api = &pd_driver;
             break;
         }
         #endif
-        #if BUILD_HAS_MOD_SYSTEM_POWER
+#ifdef BUILD_HAS_MOD_SYSTEM_POWER
         if (fwk_id_get_module_idx(source_id) == FWK_MODULE_IDX_SYSTEM_POWER) {
             pd_ctx->bound_id = source_id;
             *api = &pd_driver;
             break;
         }
         #endif
-        assert(false);
+        fwk_unexpected();
         return FWK_E_ACCESS;
 
     default:

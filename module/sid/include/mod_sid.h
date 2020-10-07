@@ -8,14 +8,17 @@
 #ifndef MOD_SID_H
 #define MOD_SID_H
 
-#include <stdint.h>
+#include <mod_pcid.h>
+
 #include <fwk_id.h>
 #include <fwk_module_idx.h>
-#include <mod_pcid.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
@@ -24,7 +27,7 @@
  * \brief Module used to interface with the SID register set.
  *
  * \details This module uses the SID register set to get information about the
- *     subsystem that the firmware is running on. @{
+ *     subsystem that the firmware is running on. \{
  */
 
 /*!
@@ -98,8 +101,8 @@ struct mod_sid_subsystem_config {
  *
  * \param[out] system_info Pointer to the system information data.
  *
- * \retval FWK_SUCCESS The pointer was returned successfully.
- * \retval FWK_E_INIT The system information is not initialized.
+ * \retval ::FWK_SUCCESS The pointer was returned successfully.
+ * \retval ::FWK_E_INIT The system information is not initialized.
  */
 int mod_sid_get_system_info(const struct mod_sid_info **system_info);
 
@@ -112,11 +115,11 @@ enum mod_sid_api_idx {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_SID_H */

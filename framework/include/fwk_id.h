@@ -11,19 +11,22 @@
 #ifndef FWK_ID_H
 #define FWK_ID_H
 
+#include <internal/fwk_id.h>
+
+#include <fwk_attributes.h>
+#include <fwk_status.h>
+
 #include <stdbool.h>
 #include <stdint.h>
-#include <internal/fwk_id.h>
-#include <fwk_status.h>
 
 /*!
  * \addtogroup GroupLibFramework Framework
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupId Identifiers
- * @{
+ * \{
  */
 
 /*!
@@ -50,7 +53,7 @@ enum fwk_id_type {
  * \brief Build a 'none' identifier.
  *
  * \note This macro expands to a designated initializer, and can be used to
- *      initialize a \ref fwk_id_t.
+ *      initialize a ::fwk_id_t.
  *
  * \details Build an id that explicitly refers to nothing.
  *
@@ -72,7 +75,7 @@ enum fwk_id_type {
  * \brief Build a 'none' identifier.
  *
  * \note This macro expands to a compound literal, and can be used as an lvalue
- *      expression returning type \ref fwk_id_t.
+ *      expression returning type ::fwk_id_t.
  *
  * \details Build an id that explicitly refers to nothing.
  *
@@ -93,7 +96,7 @@ enum fwk_id_type {
  * \brief Build a module identifier from a module index.
  *
  * \note This macro expands to a designated initializer, and can be used to
- *      initialize a \ref fwk_id_t.
+ *      initialize a ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -116,7 +119,7 @@ enum fwk_id_type {
  * \brief Build a module identifier from a module index.
  *
  * \note This macro expands to a compound literal, and can be used as an lvalue
- *      expression returning type \ref fwk_id_t.
+ *      expression returning type ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -136,7 +139,7 @@ enum fwk_id_type {
  * \brief Build an element identifier from a module index and an element index.
  *
  * \note This macro expands to a designated initializer, and can be used to
- *      initialize a \ref fwk_id_t.
+ *      initialize a ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -161,7 +164,7 @@ enum fwk_id_type {
  * \brief Build an element identifier from a module index and an element index.
  *
  * \note This macro expands to a compound literal, and can be used as an lvalue
- *      expression returning type \ref fwk_id_t.
+ *      expression returning type ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -184,7 +187,7 @@ enum fwk_id_type {
  *      and a sub-element index.
  *
  * \note This macro expands to a designated initializer, and can be used to
- *      initialize a \ref fwk_id_t.
+ *      initialize a ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -213,7 +216,7 @@ enum fwk_id_type {
  *      and a sub-element index.
  *
  * \note This macro expands to a compound literal, and can be used as an lvalue
- *      expression returning type \ref fwk_id_t.
+ *      expression returning type ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -237,7 +240,7 @@ enum fwk_id_type {
  * \brief Build an API identifier from a module index and an API index.
  *
  * \note This macro expands to a designated initializer, and can be used to
- *      initialize a \ref fwk_id_t.
+ *      initialize a ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -262,7 +265,7 @@ enum fwk_id_type {
  * \brief Build an API identifier from a module index and an API index.
  *
  * \note This macro expands to a compound literal, and can be used as an lvalue
- *      expression returning type \ref fwk_id_t.
+ *      expression returning type ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -284,7 +287,7 @@ enum fwk_id_type {
  * \brief Build an event identifier from a module index and an event index.
  *
  * \note This macro expands to a designated initializer, and can be used to
- *      initialize a \ref fwk_id_t.
+ *      initialize a ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -309,7 +312,7 @@ enum fwk_id_type {
  * \brief Build an event identifier from a module index and an event index.
  *
  * \note This macro expands to a compound literal, and can be used as an lvalue
- *      expression returning type \ref fwk_id_t.
+ *      expression returning type ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -332,7 +335,7 @@ enum fwk_id_type {
  *      notification index.
  *
  * \note This macro expands to a designated initializer, and can be used to
- *      initialize a \ref fwk_id_t.
+ *      initialize a ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -359,7 +362,7 @@ enum fwk_id_type {
  *      notification index.
  *
  * \note This macro expands to a compound literal, and can be used as an lvalue
- *      expression returning type \ref fwk_id_t.
+ *      expression returning type ::fwk_id_t.
  *
  * \details Example usage:
  *      \code{.c}
@@ -394,6 +397,21 @@ enum fwk_id_type {
 #define FWK_ID_STR(ID) (__fwk_id_str(ID).str)
 
 /*!
+ * \brief Build a verbose string representation of an identifier.
+ *
+ * \details Strings returned by this macro describe the integer parts of an
+ *      identifier and include the names of its parts that represent system
+ *      entities.
+ *
+ * \param ID Identifier.
+ *
+ * \return String representation of the identifier.
+ *
+ * \hideinitializer
+ */
+#define FWK_ID_VERBOSE_STR(ID) (fwk_id_verbose_str(ID).str)
+
+/*!
  * \brief Generic identifier.
  */
 typedef union __fwk_id fwk_id_t;
@@ -407,7 +425,8 @@ typedef union __fwk_id fwk_id_t;
  * \retval true The identifier is of the type specified.
  * \retval false The identifier is not of the type specified.
  */
-bool fwk_id_is_type(fwk_id_t id, enum fwk_id_type type);
+bool fwk_id_is_type(fwk_id_t id, enum fwk_id_type type) FWK_CONST FWK_LEAF
+    FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the type of an identifier.
@@ -416,7 +435,7 @@ bool fwk_id_is_type(fwk_id_t id, enum fwk_id_type type);
  *
  * \return Identifier type.
  */
-enum fwk_id_type fwk_id_get_type(fwk_id_t id);
+enum fwk_id_type fwk_id_get_type(fwk_id_t id) FWK_CONST FWK_LEAF FWK_NOTHROW;
 
 /*!
  * \brief Check if two identifiers refer to the same entity.
@@ -427,7 +446,8 @@ enum fwk_id_type fwk_id_get_type(fwk_id_t id);
  * \retval true The identifiers refer to the same entity.
  * \retval false The identifiers do not refer to the same entity.
  */
-bool fwk_id_is_equal(fwk_id_t left, fwk_id_t right);
+bool fwk_id_is_equal(fwk_id_t left, fwk_id_t right) FWK_CONST FWK_LEAF
+    FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the identifier of the module that owns a given identifier.
@@ -439,7 +459,7 @@ bool fwk_id_is_equal(fwk_id_t left, fwk_id_t right);
  *
  * \return Identifier of the owning module.
  */
-fwk_id_t fwk_id_build_module_id(fwk_id_t id);
+fwk_id_t fwk_id_build_module_id(fwk_id_t id) FWK_CONST FWK_LEAF FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the identifier of an element for a given identifier and
@@ -458,7 +478,8 @@ fwk_id_t fwk_id_build_module_id(fwk_id_t id);
  *
  * \return Element identifier associated with the element index for the module.
  */
-fwk_id_t fwk_id_build_element_id(fwk_id_t id, unsigned int element_idx);
+fwk_id_t fwk_id_build_element_id(fwk_id_t id, unsigned int element_idx)
+    FWK_CONST FWK_LEAF FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the identifier of an API for a given identifier and
@@ -477,7 +498,8 @@ fwk_id_t fwk_id_build_element_id(fwk_id_t id, unsigned int element_idx);
  *
  * \return API identifier associated with the API index for the module.
  */
-fwk_id_t fwk_id_build_api_id(fwk_id_t id, unsigned int api_idx);
+fwk_id_t fwk_id_build_api_id(fwk_id_t id, unsigned int api_idx)
+    FWK_CONST FWK_LEAF FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the module index of an identifier.
@@ -486,7 +508,7 @@ fwk_id_t fwk_id_build_api_id(fwk_id_t id, unsigned int api_idx);
  *
  * \return Module index.
  */
-unsigned int fwk_id_get_module_idx(fwk_id_t id);
+unsigned int fwk_id_get_module_idx(fwk_id_t id) FWK_CONST FWK_LEAF FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the index of an element from its identifier or the identifier
@@ -496,7 +518,8 @@ unsigned int fwk_id_get_module_idx(fwk_id_t id);
  *
  * \return Element index.
  */
-unsigned int fwk_id_get_element_idx(fwk_id_t element_id);
+unsigned int fwk_id_get_element_idx(fwk_id_t element_id) FWK_CONST FWK_LEAF
+    FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the index of a sub-element from its identifier.
@@ -505,7 +528,8 @@ unsigned int fwk_id_get_element_idx(fwk_id_t element_id);
  *
  * \return Sub-element index.
  */
-unsigned int fwk_id_get_sub_element_idx(fwk_id_t sub_element_id);
+unsigned int fwk_id_get_sub_element_idx(
+    fwk_id_t sub_element_id) FWK_CONST FWK_LEAF FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the index of an API from its identifier.
@@ -514,7 +538,7 @@ unsigned int fwk_id_get_sub_element_idx(fwk_id_t sub_element_id);
  *
  * \return API index.
  */
-unsigned int fwk_id_get_api_idx(fwk_id_t api_id);
+unsigned int fwk_id_get_api_idx(fwk_id_t api_id) FWK_CONST FWK_LEAF FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the index of an event from its identifier.
@@ -523,7 +547,8 @@ unsigned int fwk_id_get_api_idx(fwk_id_t api_id);
  *
  * \return Event index.
  */
-unsigned int fwk_id_get_event_idx(fwk_id_t event_id);
+unsigned int fwk_id_get_event_idx(fwk_id_t event_id) FWK_CONST FWK_LEAF
+    FWK_NOTHROW;
 
 /*!
  * \brief Retrieve the index of a notification from its identifier.
@@ -532,14 +557,43 @@ unsigned int fwk_id_get_event_idx(fwk_id_t event_id);
  *
  * \return Notification index.
  */
-unsigned int fwk_id_get_notification_idx(fwk_id_t notification_id);
+unsigned int fwk_id_get_notification_idx(
+    fwk_id_t notification_id) FWK_CONST FWK_LEAF FWK_NOTHROW;
 
 /*!
- * @}
+ * \internal
+ *
+ * \brief Verbose identifier string helper structure.
+ *
+ * \details C does not support returning an array from a function. This
+ *      structure hides the array within a structure, and instead the structure
+ *      is returned to the caller. This allows them to access the array without
+ *      it decaying to a pointer when returned.
+ */
+struct fwk_id_verbose_fmt {
+    char str[128]; /*!< Identifier string representation. */
+};
+
+/*!
+ * \internal
+ *
+ * \brief Generate a verbose string description of an identifier.
+ *
+ * \details Generates a string description of an identifier, including the names
+ *      of any entities that form part of the identifier.
+ *
+ * \param[in] id Identifier to describe.
+ *
+ * \return Verbose string representation of the identifier.
+ */
+struct fwk_id_verbose_fmt fwk_id_verbose_str(fwk_id_t id);
+
+/*!
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* FWK_ID_H */

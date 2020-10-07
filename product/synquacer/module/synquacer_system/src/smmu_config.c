@@ -5,14 +5,18 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
-#include <string.h>
-
-#include <synquacer_config.h>
-#include <synquacer_mmap.h>
-#include <mmu500.h>
+#include "mmu500.h"
+#include "synquacer_config.h"
+#include "synquacer_mmap.h"
 
 #include <internal/smmu_wrapper.h>
+
+#include <mod_synquacer_system.h>
+
+#include <fwk_log.h>
+
+#include <stdint.h>
+#include <string.h>
 
 typedef struct {
     uint64_t desc[0x1000 / 8];
@@ -97,12 +101,12 @@ uint64_t smmu_convert_to_axi_addr(void *addr_cm3view)
 
 void smmu_wrapper_initialize(void)
 {
-    SYNQUACER_DEV_LOG_INFO("Configure System MMUs starts\n");
+    FWK_LOG_INFO("Configure System MMUs starts");
 
     /* Basic Configuration */
     smmu_wrapper_pcie();
 
-    SYNQUACER_DEV_LOG_INFO("Configure System MMUs finished\n");
+    FWK_LOG_INFO("Configure System MMUs finished");
 }
 
 void smmu_wrapper_pcie(void)

@@ -5,21 +5,25 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <string.h>
-#include <stdio.h>
+#include "config_power_domain.h"
+#include "rdn1e1_core.h"
+#include "scp_rdn1e1_mmap.h"
+
+#include <mod_cmn600.h>
+#include <mod_power_domain.h>
+#include <mod_ppu_v1.h>
+
 #include <fwk_assert.h>
 #include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_interrupt.h>
 #include <fwk_macros.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_cmn600.h>
-#include <mod_power_domain.h>
-#include <mod_ppu_v1.h>
-#include <rdn1e1_core.h>
-#include <scp_rdn1e1_irq.h>
-#include <scp_rdn1e1_mmap.h>
-#include <config_power_domain.h>
+
+#include <stdio.h>
+#include <string.h>
 
 /* Maximum PPU core name size including the null terminator */
 #define PPU_CORE_NAME_SIZE 12
@@ -69,7 +73,7 @@ static const struct fwk_element *ppu_v1_get_element_table(fwk_id_t module_id)
     core_count = rdn1e1_core_get_core_count();
     cluster_count = rdn1e1_core_get_cluster_count();
 
-    assert(cluster_count == FWK_ARRAY_SIZE(cluster_idx_to_node_id));
+    fwk_assert(cluster_count == FWK_ARRAY_SIZE(cluster_idx_to_node_id));
 
     /*
      * Allocate element descriptors based on:
@@ -139,7 +143,7 @@ static const struct fwk_element *ppu_v1_get_element_table(fwk_id_t module_id)
      */
     ppu_v1_config_data.pd_source_id = fwk_id_build_element_id(
         fwk_module_id_power_domain,
-        core_count + PD_STATIC_DEV_IDX_SYSTOP);
+        core_count + cluster_count + PD_STATIC_DEV_IDX_SYSTOP);
 
     return element_table;
 }
@@ -148,6 +152,6 @@ static const struct fwk_element *ppu_v1_get_element_table(fwk_id_t module_id)
  * Power module configuration data
  */
 const struct fwk_module_config config_ppu_v1 = {
-    .get_element_table = ppu_v1_get_element_table,
     .data = &ppu_v1_config_data,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(ppu_v1_get_element_table),
 };

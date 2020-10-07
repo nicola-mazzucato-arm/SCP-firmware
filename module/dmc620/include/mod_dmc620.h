@@ -11,13 +11,15 @@
 #ifndef MOD_DMC620_H
 #define MOD_DMC620_H
 
-#include <stdint.h>
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 
+#include <stdint.h>
+
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
@@ -28,7 +30,7 @@
  *      are programmed here.
  *
  * \sa https://developer.arm.com/docs/100568/latest/programmers-model/register-summary
- * @{
+ * \{
  */
 
 /*!
@@ -42,16 +44,14 @@
 struct mod_dmc620_access_address_next {
     /*!
      * \cond
-     * @{
      */
     FWK_RW    uint32_t    MIN_31_00;
     FWK_RW    uint32_t    MIN_43_32;
     FWK_RW    uint32_t    MAX_31_00;
     FWK_RW    uint32_t    MAX_43_32;
     /*!
-    * \endcond
-    * @}
-    */
+     * \endcond
+     */
 };
 
 /*!
@@ -60,16 +60,14 @@ struct mod_dmc620_access_address_next {
 struct mod_dmc620_access_address_now {
     /*!
      * \cond
-     * @{
      */
     FWK_R   uint32_t    MIN_31_00;
     FWK_R   uint32_t    MIN_43_32;
     FWK_R   uint32_t    MAX_31_00;
     FWK_R   uint32_t    MAX_43_32;
     /*!
-    * \endcond
-    * @}
-    */
+     * \endcond
+     */
 };
 
 /*!
@@ -78,22 +76,20 @@ struct mod_dmc620_access_address_now {
 struct mod_dmc620_pmu_counter {
     /*!
      * \cond
-     * @{
      */
-    FWK_RW  uint32_t    MASK_31_00;
-    FWK_RW  uint32_t    MASK_63_32;
-    FWK_RW  uint32_t    MATCH_31_00;
-    FWK_RW  uint32_t    MATCH_63_32;
-    FWK_RW  uint32_t    CONTROL;
-            uint32_t    RESERVED0;
-    FWK_R   uint32_t    SNAPSHOT_VALUE_31_00;
-            uint32_t    RESERVED1;
-    FWK_RW  uint32_t    VALUE_31_00;
-            uint32_t    RESERVED2;
+    FWK_RW uint32_t MASK_31_00;
+    FWK_RW uint32_t MASK_63_32;
+    FWK_RW uint32_t MATCH_31_00;
+    FWK_RW uint32_t MATCH_63_32;
+    FWK_RW uint32_t CONTROL;
+    uint32_t RESERVED0;
+    FWK_R uint32_t SNAPSHOT_VALUE_31_00;
+    uint32_t RESERVED1;
+    FWK_RW uint32_t VALUE_31_00;
+    uint32_t RESERVED2;
     /*!
-    * \endcond
-    * @}
-    */
+     * \endcond
+     */
 };
 
 /*!
@@ -102,7 +98,6 @@ struct mod_dmc620_pmu_counter {
 struct mod_dmc620_reg {
     /*!
      * \cond
-     * @{
      */
     FWK_R   uint32_t    MEMC_STATUS;
     FWK_R   uint32_t    MEMC_CONFIG;
@@ -557,9 +552,8 @@ struct mod_dmc620_reg {
     FWK_R   uint32_t    COMPONENT_ID_2;
     FWK_R   uint32_t    COMPONENT_ID_3;
     /*!
-    * \endcond
-    * @}
-    */
+     * \endcond
+     */
 };
 
 /*!
@@ -634,7 +628,7 @@ struct mod_dmc_ddr_phy_api {
      * \param element_id Element identifier corresponding to the device to
      *      configure.
      *
-     * \retval FWK_SUCCESS if the operation succeed.
+     * \retval ::FWK_SUCCESS if the operation succeed.
      * \return one of the error code otherwise.
      */
     int (*configure)(fwk_id_t element_id);
@@ -660,11 +654,11 @@ struct mod_dmc620_module_config {
 extern const struct fwk_module module_dmc620;
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_DMC620_H */

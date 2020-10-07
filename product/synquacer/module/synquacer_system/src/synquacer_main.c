@@ -5,34 +5,36 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
+#include "low_level_access.h"
+#include "pik_system.h"
+#include "synquacer_common.h"
+#include "synquacer_config.h"
+#include "synquacer_mmap.h"
 
-#include <fwk_id.h>
-#include <fwk_macros.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <fwk_notification.h>
-#include <fwk_status.h>
+#include <boot_ctl.h>
+#include <sysdef_option.h>
+
+#include <internal/crg11.h>
+#include <internal/gpio.h>
+#include <internal/nic400.h>
+#include <internal/thermal_sensor.h>
 
 #include <mod_f_i2c.h>
 #include <mod_hsspi.h>
 #include <mod_power_domain.h>
 #include <mod_synquacer_system.h>
 
-#include <synquacer_config.h>
-#include <synquacer_debug.h>
-#include <synquacer_mmap.h>
-#include <config_power_domain.h>
-#include <low_level_access.h>
+#include <fwk_assert.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
+#include <fwk_module_idx.h>
+#include <fwk_status.h>
 
-#include <internal/crg11.h>
-#include <internal/gpio.h>
-#include <internal/nic400.h>
-#include <internal/thermal_sensor.h>
-#include <boot_ctl.h>
-#include <sysdef_option.h>
+#include <fmw_cmsis.h>
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
 
 #define SEC_OVERRIDE_CONVERT_MASK UINT32_C(0x3)
 
@@ -266,9 +268,9 @@ static void fw_system_reset(void)
 
 int reboot_chip(void)
 {
-    SYNQUACER_DEV_LOG_INFO("[SYNQUACER SYSTEM] HSSPI exit start.\n");
+    FWK_LOG_INFO("[SYNQUACER SYSTEM] HSSPI exit start.");
     synquacer_system_ctx.hsspi_api->hsspi_exit();
-    SYNQUACER_DEV_LOG_INFO("[SYNQUACER SYSTEM] HSSPI exit end.\n");
+    FWK_LOG_INFO("[SYNQUACER SYSTEM] HSSPI exit end.");
 
     __disable_fault_irq();
 
@@ -299,8 +301,8 @@ void main_initialize(void)
 
     fw_clear_clkforce(sysdef_option_get_clear_clkforce());
 
-    SYNQUACER_DEV_LOG_INFO(
-        "[SYNQUACER SYSTEM] chip version %s.\n",
+    FWK_LOG_INFO(
+        "[SYNQUACER SYSTEM] chip version %s.",
         sysdef_option_get_chip_version());
 
     power_domain_coldboot();
@@ -313,7 +315,7 @@ void main_initialize(void)
     synquacer_system_ctx.f_i2c_api->init();
 
     status = fw_ddr_spd_param_check();
-    assert(status == FWK_SUCCESS);
+    fwk_assert(status == FWK_SUCCESS);
 
     /* prepare eeprom configuration data */
     memcpy(
@@ -331,11 +333,10 @@ static void fw_wakeup_ap(void)
     ap_dev_init();
 
     synquacer_system_ctx.hsspi_api->hsspi_init();
-    SYNQUACER_DEV_LOG_INFO(
-        "[SYNQUACER SYSTEM] Finished initializing HS-SPI controller.\n");
-    SYNQUACER_DEV_LOG_INFO("[SYNQUACER SYSTEM] Arm tf load start.\n");
+    FWK_LOG_INFO("[SYNQUACER SYSTEM] Finished initializing HS-SPI controller.");
+    FWK_LOG_INFO("[SYNQUACER SYSTEM] Arm tf load start.");
     fw_fip_load_arm_tf();
-    SYNQUACER_DEV_LOG_INFO("[SYNQUACER SYSTEM] Arm tf load end.\n");
+    FWK_LOG_INFO("[SYNQUACER SYSTEM] Arm tf load end.");
 }
 
 int synquacer_main(void)
@@ -346,23 +347,22 @@ int synquacer_main(void)
     pcie_wrapper_configure();
     fw_wakeup_ap();
 
-    SYNQUACER_DEV_LOG_INFO("[SYNQUACER SYSTEM] powering up AP\n");
-    status =
-        synquacer_system_ctx.mod_pd_restricted_api->set_composite_state_async(
-            FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, 0),
-            false,
-            MOD_PD_COMPOSITE_STATE(
-                MOD_PD_LEVEL_2,
-                0,
-                MOD_PD_STATE_ON,
-                MOD_PD_STATE_ON,
-                MOD_PD_STATE_ON));
+    FWK_LOG_INFO("[SYNQUACER SYSTEM] powering up AP");
+    status = synquacer_system_ctx.mod_pd_restricted_api->set_state_async(
+        FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, 0),
+        false,
+        MOD_PD_COMPOSITE_STATE(
+            MOD_PD_LEVEL_2,
+            0,
+            MOD_PD_STATE_ON,
+            MOD_PD_STATE_ON,
+            MOD_PD_STATE_ON));
 
     if (status == FWK_SUCCESS)
-        SYNQUACER_DEV_LOG_INFO("[SYNQUACER SYSTEM] finished powering up AP\n");
+        FWK_LOG_INFO("[SYNQUACER SYSTEM] finished powering up AP");
     else
-        SYNQUACER_DEV_LOG_ERROR(
-            "[SYNQUACER SYSTEM] failed to power up AP. status=%d\n", status);
+        FWK_LOG_ERR(
+            "[SYNQUACER SYSTEM] failed to power up AP. status=%d", status);
 
     return status;
 }

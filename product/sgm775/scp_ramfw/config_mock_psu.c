@@ -5,10 +5,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <fwk_element.h>
-#include <fwk_module.h>
+#include "config_mock_psu.h"
+
 #include <mod_mock_psu.h>
-#include <config_mock_psu.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
+
+#include <stdbool.h>
+#include <stddef.h>
 
 static const struct fwk_element element_table[] = {
     [CONFIG_MOCK_PSU_ELEMENT_IDX_CPU_GROUP_LITTLE] = {
@@ -72,6 +78,5 @@ static const struct fwk_element *get_element_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_mock_psu = {
-    .get_element_table = get_element_table,
-    .data = NULL,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_element_table),
 };

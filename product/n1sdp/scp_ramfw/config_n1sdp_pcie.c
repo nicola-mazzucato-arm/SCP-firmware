@@ -5,12 +5,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdbool.h>
+#include "n1sdp_scp_mmap.h"
+
+#include <mod_n1sdp_pcie.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
-#include <mod_n1sdp_pcie.h>
-#include <n1sdp_scp_mmap.h>
+
+#include <stdbool.h>
 
 static const struct fwk_element n1sdp_pcie_element_table[] = {
     [0] = {
@@ -45,5 +48,5 @@ static const struct fwk_element *n1sdp_pcie_get_element_table
 }
 
 const struct fwk_module_config config_n1sdp_pcie = {
-    .get_element_table = n1sdp_pcie_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(n1sdp_pcie_get_element_table),
 };

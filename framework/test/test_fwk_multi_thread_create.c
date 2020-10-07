@@ -6,22 +6,24 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <limits.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include <rtx_os.h>
+
+#include <internal/fwk_id.h>
+#include <internal/fwk_module.h>
+#include <internal/fwk_multi_thread.h>
+
 #include <fwk_assert.h>
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_status.h>
 #include <fwk_test.h>
-#include <internal/fwk_id.h>
-#include <internal/fwk_module.h>
-#include <internal/fwk_multi_thread.h>
 
-#include <rtx_os.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define ELEM_THREAD_ID      10
 #define MODULE_THREAD_ID    11
@@ -58,6 +60,12 @@ uint32_t __wrap_osThreadFlagsWait(uint32_t flags, uint32_t options,
     (void) options;
     (void) timeout;
     return flags;
+}
+
+uint32_t __wrap_osThreadFlagsClear(uint32_t flags)
+{
+    (void)flags;
+    return 0;
 }
 
 uint32_t __wrap_osThreadFlagsSet(osThreadId_t thread_id, uint32_t flags)
@@ -136,19 +144,19 @@ bool __wrap_fwk_module_is_valid_notification_id(fwk_id_t id)
     return false;
 }
 
-struct fwk_element_ctx *__wrap___fwk_module_get_element_ctx(fwk_id_t id)
+struct fwk_element_ctx *__wrap_fwk_module_get_element_ctx(fwk_id_t id)
 {
     (void) id;
     return &fake_element_ctx;
 }
 
-struct fwk_module_ctx *__wrap___fwk_module_get_ctx(fwk_id_t id)
+struct fwk_module_ctx *__wrap_fwk_module_get_ctx(fwk_id_t id)
 {
     (void) id;
     return &fake_module_ctx;
 }
 
-int __wrap___fwk_module_get_state(fwk_id_t id, enum fwk_module_state *state)
+int __wrap_fwk_module_get_state(fwk_id_t id, enum fwk_module_state *state)
 {
     (void) id;
     (void) state;
@@ -164,7 +172,6 @@ static int test_suite_setup(void)
 
 static void test_case_setup(void)
 {
-
     fwk_mm_calloc_return_null = UINT_MAX;
     fwk_mm_calloc_call_count = 0;
     fwk_interrupt_get_current_return_val = FWK_SUCCESS;
@@ -184,24 +191,12 @@ static void test_case_setup(void)
     fwk_module_is_valid_module_id_return_val = true;
 }
 
-static void check_osThreadNew_param(void)
-{
-    assert(strcmp(osThreadNew_param_attr->name, "") == 0);
-    assert(osThreadNew_param_attr->attr_bits == osThreadDetached);
-    assert(osThreadNew_param_attr->cb_mem != NULL);
-    assert(osThreadNew_param_attr->cb_size == osRtxThreadCbSize);
-    assert(osThreadNew_param_attr->stack_mem != NULL);
-    assert(osThreadNew_param_attr->stack_size == (256 * 4));
-    assert(osThreadNew_param_attr->priority == osPriorityNormal);
-}
-
 static void test_create_common_thread(void)
 {
     int result;
 
     result = __fwk_thread_init(16);
     assert(result == FWK_SUCCESS);
-    check_osThreadNew_param();
 }
 
 static void test_create_id_invalid(void)
@@ -245,7 +240,7 @@ static void test_create_thread_memory_allocation_failed(void)
     fwk_id_t id = FWK_ID_MODULE(0x1);
 
     /* Thread memory allocation failed */
-    fwk_mm_calloc_return_null = 3;
+    fwk_mm_calloc_return_null = 1;
     status = fwk_thread_create(id);
     assert(status == FWK_E_NOMEM);
 }
@@ -259,7 +254,6 @@ static void test_create_thread_creation_failed(void)
     osThreadNew_return_val = NULL;
     status = fwk_thread_create(id);
     assert(status == FWK_E_OS);
-    check_osThreadNew_param();
 }
 
 static void test_create_element_thread(void)
@@ -271,7 +265,6 @@ static void test_create_element_thread(void)
     fwk_module_is_valid_element_id_return_val = true;
     status = fwk_thread_create(id);
     assert(status == FWK_SUCCESS);
-    check_osThreadNew_param();
     assert(fake_element_ctx.thread_ctx == fwk_mm_calloc_val);
 }
 
@@ -283,7 +276,6 @@ static void test_create_module_thread(void)
     /* Thread creation for a module */
     status = fwk_thread_create(id);
     assert(status == FWK_SUCCESS);
-    check_osThreadNew_param();
     assert(fake_module_ctx.thread_ctx == fwk_mm_calloc_val);
 }
 

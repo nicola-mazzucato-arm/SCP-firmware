@@ -5,17 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <fwk_element.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
+#include "config_clock.h"
+#include "config_power_domain.h"
+#include "rdn1e1_core.h"
+
 #include <mod_clock.h>
 #include <mod_css_clock.h>
 #include <mod_pik_clock.h>
 #include <mod_power_domain.h>
-#include <rdn1e1_core.h>
-#include <system_clock.h>
-#include <config_clock.h>
-#include <config_power_domain.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
 
 static const struct fwk_element clock_dev_desc_table[] = {
     [CLOCK_IDX_INTERCONNECT] = {
@@ -58,21 +60,23 @@ static const struct fwk_element *clock_get_dev_desc_table(fwk_id_t module_id)
             (struct mod_clock_dev_config *)clock_dev_desc_table[i].data;
         dev_config->pd_source_id = fwk_id_build_element_id(
             fwk_module_id_power_domain,
-            rdn1e1_core_get_core_count() + PD_STATIC_DEV_IDX_SYSTOP);
+            rdn1e1_core_get_core_count() + rdn1e1_core_get_cluster_count() +
+                PD_STATIC_DEV_IDX_SYSTOP);
     }
 
     return clock_dev_desc_table;
 }
 
 const struct fwk_module_config config_clock = {
-    .get_element_table = clock_get_dev_desc_table,
-    .data = &((struct mod_clock_config) {
-        .pd_transition_notification_id = FWK_ID_NOTIFICATION_INIT(
-            FWK_MODULE_IDX_POWER_DOMAIN,
-            MOD_PD_NOTIFICATION_IDX_POWER_STATE_TRANSITION),
-        .pd_pre_transition_notification_id = FWK_ID_NOTIFICATION_INIT(
-            FWK_MODULE_IDX_POWER_DOMAIN,
-            MOD_PD_NOTIFICATION_IDX_POWER_STATE_PRE_TRANSITION),
-    }),
+    .data =
+        &(struct mod_clock_config){
+            .pd_transition_notification_id = FWK_ID_NOTIFICATION_INIT(
+                FWK_MODULE_IDX_POWER_DOMAIN,
+                MOD_PD_NOTIFICATION_IDX_POWER_STATE_TRANSITION),
+            .pd_pre_transition_notification_id = FWK_ID_NOTIFICATION_INIT(
+                FWK_MODULE_IDX_POWER_DOMAIN,
+                MOD_PD_NOTIFICATION_IDX_POWER_STATE_PRE_TRANSITION),
+        },
 
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(clock_get_dev_desc_table),
 };

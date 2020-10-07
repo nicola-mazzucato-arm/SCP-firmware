@@ -5,11 +5,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "juno_mmap.h"
+
+#include <mod_juno_ddr_phy400.h>
+
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_juno_ddr_phy400.h>
-#include <juno_mmap.h>
 
 static struct fwk_element juno_ddr_phy400_element_table[] = {
     [0] = {
@@ -44,8 +47,10 @@ static const struct fwk_element *juno_ddr_phy400_get_element_table
 }
 
 struct fwk_module_config config_juno_ddr_phy400 = {
-    .get_element_table = juno_ddr_phy400_get_element_table,
-    .data = &((struct mod_juno_ddr_phy400_config) {
-        .timer_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_TIMER, 0),
-    })
+    .data =
+        &(struct mod_juno_ddr_phy400_config){
+            .timer_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_TIMER, 0),
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(juno_ddr_phy400_get_element_table),
 };

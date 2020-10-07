@@ -10,10 +10,6 @@ BS_FIRMWARE_HAS_MULTITHREADING := yes
 BS_FIRMWARE_HAS_NOTIFICATION := yes
 
 DEFINES += HAS_RTOS
-DEFINES += SYNQUACER_LOG_GROUP_ERROR
-DEFINES += SYNQUACER_LOG_GROUP_INFO
-DEFINES += SYNQUACER_LOG_GROUP_WARNING
-#DEFINES += SYNQUACER_LOG_GROUP_DEBUG
 DEFINES += PCIE_FILTER_BUS0_TYPE0_CONFIG
 DEFINES += ENABLE_OPTEE
 DEFINES += SET_PCIE_NON_SECURE
@@ -25,7 +21,6 @@ INCLUDES += $(OS_DIR)/RTX/Include1
 BS_FIRMWARE_MODULES := \
     armv7m_mpu \
     f_uart3 \
-    log \
     gtimer \
     timer \
     ppu_v0_synquacer \
@@ -55,7 +50,7 @@ BS_FIRMWARE_SOURCES := \
     config_css_clock.c \
     config_f_i2c.c \
     config_hsspi.c \
-    config_log_f_uart3.c \
+    config_f_uart3.c \
     config_mhu.c \
     config_pik_clock.c \
     config_power_domain.c \
@@ -67,6 +62,7 @@ BS_FIRMWARE_SOURCES := \
     config_synquacer_memc.c \
     config_system_power.c \
     config_timer.c \
-    rtx_config.c
+    rtx_config.c \
+    config_scmi_power_domain.c
 
 include $(BS_DIR)/firmware.mk

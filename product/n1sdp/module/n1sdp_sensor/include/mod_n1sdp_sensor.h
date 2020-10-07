@@ -8,20 +8,22 @@
 #ifndef MOD_N1SDP_SENSOR_H
 #define MOD_N1SDP_SENSOR_H
 
-#include <stdint.h>
-#include <fwk_id.h>
 #include <mod_sensor.h>
+
+#include <fwk_id.h>
+
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupN1SDPModule N1SDP Product Modules
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupN1SDPSensor N1SDP Sensor Support
  *
  * \brief Driver for reading on-chip temperature & voltage sensor values.
- * @{
+ * \{
  */
 
 /*!
@@ -105,11 +107,11 @@ struct mod_n1sdp_sensor_config {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_N1SDP_SENSOR_H */

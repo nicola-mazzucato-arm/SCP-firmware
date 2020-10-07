@@ -8,20 +8,13 @@
  *     N1SDP SCP to SCP I2C communications protocol driver
  */
 
-#include <stdint.h>
-#include <string.h>
-#include <stdbool.h>
-#include <fmw_cmsis.h>
-#include <fwk_assert.h>
-#include <fwk_element.h>
-#include <fwk_id.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <fwk_multi_thread.h>
-#include <fwk_notification.h>
+#include "config_clock.h"
+#include "n1sdp_core.h"
+
+#include <internal/n1sdp_scp2pcc.h>
+
 #include <mod_clock.h>
 #include <mod_cmn600.h>
-#include <mod_log.h>
 #include <mod_n1sdp_c2c_i2c.h>
 #include <mod_n1sdp_dmc620.h>
 #include <mod_n1sdp_i2c.h>
@@ -30,8 +23,23 @@
 #include <mod_n1sdp_timer_sync.h>
 #include <mod_power_domain.h>
 #include <mod_timer.h>
-#include <config_clock.h>
-#include <n1sdp_core.h>
+
+#include <fwk_assert.h>
+#include <fwk_event.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
+#include <fwk_macros.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+#include <fwk_multi_thread.h>
+#include <fwk_notification.h>
+#include <fwk_status.h>
+
+#include <fmw_cmsis.h>
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
 
 /* Module definitions */
 #define N1SDP_C2C_DATA_SIZE        8
@@ -78,9 +86,6 @@ static const char * const cmd_str[] = {
 struct n1sdp_c2c_ctx {
     /*  Pointer to module configuration */
     struct n1sdp_c2c_dev_config *config;
-
-    /* Log API pointer */
-    const struct mod_log_api *log_api;
 
     /* I2C Master API ID */
     struct mod_n1sdp_i2c_master_api_polled *master_api;
@@ -146,8 +151,7 @@ static int n1sdp_c2c_master_tx_command(uint8_t cmd)
 {
     int status;
 
-    n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                               "[C2C] %s in slave...", cmd_str[cmd]);
+    FWK_LOG_INFO("[C2C] %s in slave...", cmd_str[cmd]);
 
     n1sdp_c2c_ctx.master_tx_data[0] = cmd;
     status = n1sdp_c2c_ctx.master_api->write(
@@ -156,10 +160,10 @@ static int n1sdp_c2c_master_tx_command(uint8_t cmd)
         (char *)&n1sdp_c2c_ctx.master_tx_data[0],
         N1SDP_C2C_DATA_SIZE, true);
     if (status != FWK_SUCCESS) {
-        n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+        FWK_LOG_INFO("[C2C] Error!");
         return status;
     }
-    n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Done\n");
+    FWK_LOG_INFO("Done");
 
     return FWK_SUCCESS;
 }
@@ -168,17 +172,16 @@ static int n1sdp_c2c_master_rx_response(void)
 {
     int status;
 
-    n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                               "[C2C] Waiting for response from slave...");
+    FWK_LOG_INFO("[C2C] Waiting for response from slave...");
     status = n1sdp_c2c_ctx.master_api->read(
         n1sdp_c2c_ctx.config->i2c_id,
         n1sdp_c2c_ctx.config->slave_addr,
         (char *)&n1sdp_c2c_ctx.master_rx_data[0], N1SDP_C2C_DATA_SIZE);
     if (status != FWK_SUCCESS) {
-        n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error %d!\n", status);
+        FWK_LOG_INFO("[C2C] Error %d!", status);
         return status;
     }
-    n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Received\n");
+    FWK_LOG_INFO("[C2C] Received");
 
     return FWK_SUCCESS;
 }
@@ -202,15 +205,14 @@ static int n1sdp_c2c_check_remote(void)
         }
 
         n1sdp_c2c_ctx.slave_alive = true;
-        n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "[C2C] Slave Alive!\n");
+        FWK_LOG_INFO("[C2C] Slave Alive!");
         return FWK_SUCCESS;
     } else {
         status = n1sdp_c2c_ctx.slave_api->read(
             n1sdp_c2c_ctx.config->i2c_id,
             &n1sdp_c2c_ctx.slave_rx_data[0], N1SDP_C2C_DATA_SIZE);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                "[C2C] Error setting up I2C for reception!\n");
+            FWK_LOG_INFO("[C2C] Error setting up I2C for reception!");
             return status;
         }
     }
@@ -229,15 +231,14 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             return status;
     }
 
-    n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                               "[C2C] %s in master...\n", cmd_str[cmd]);
+    FWK_LOG_INFO("[C2C] %s in master...", cmd_str[cmd]);
 
     switch (cmd) {
     case N1SDP_C2C_CMD_PCIE_POWER_ON:
         status = n1sdp_c2c_ctx.pcie_init_api->power_on(
             n1sdp_c2c_ctx.config->ccix_id);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -245,8 +246,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -256,7 +256,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.pcie_init_api->phy_init(
             n1sdp_c2c_ctx.config->ccix_id);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -264,8 +264,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -275,7 +274,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.pcie_init_api->controller_init(
             n1sdp_c2c_ctx.config->ccix_id, false);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -283,8 +282,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -294,7 +292,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.pcie_init_api->link_training(
             n1sdp_c2c_ctx.config->ccix_id, false);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -302,8 +300,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -313,7 +310,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.pcie_init_api->rc_setup(
             n1sdp_c2c_ctx.config->ccix_id);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -321,8 +318,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -332,7 +328,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.pcie_init_api->vc1_setup(
             n1sdp_c2c_ctx.config->ccix_id, CCIX_VC1_TC);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -340,8 +336,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -351,7 +346,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.ccix_config_api->enable_opt_tlp(
             CCIX_OPT_TLP_EN);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -359,8 +354,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -384,7 +378,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
 
         status = n1sdp_c2c_ctx.cmn600_api->set_config(&remote_config);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -392,8 +386,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -403,7 +396,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.cmn600_api->exchange_protocol_credit(
             CMN600_CCIX_LINK_ID);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -411,8 +404,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -422,7 +414,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.cmn600_api->enter_system_coherency(
             CMN600_CCIX_LINK_ID);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -430,8 +422,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -441,7 +432,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.cmn600_api->enter_dvm_domain(
             CMN600_CCIX_LINK_ID);
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -449,8 +440,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
@@ -462,14 +452,12 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                           "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
             n1sdp_c2c_ctx.slave_ddr_size_gb = n1sdp_c2c_ctx.master_rx_data[1];
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                       "[C2C] Slave DDR Size: %d GB\n",
-                                       n1sdp_c2c_ctx.slave_ddr_size_gb);
+            FWK_LOG_INFO(
+                "[C2C] Slave DDR Size: %d GB", n1sdp_c2c_ctx.slave_ddr_size_gb);
         }
         break;
 
@@ -477,7 +465,7 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
         status = n1sdp_c2c_ctx.tsync_api->master_sync(
             FWK_ID_ELEMENT(FWK_MODULE_IDX_N1SDP_TIMER_SYNC, 0));
         if (status != FWK_SUCCESS) {
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Error!\n");
+            FWK_LOG_INFO("[C2C] Error!");
             return status;
         }
         if (run_in_slave) {
@@ -485,16 +473,14 @@ static int n1sdp_c2c_multichip_run_command(uint8_t cmd, bool run_in_slave)
             if (status != FWK_SUCCESS)
                 return status;
             if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-                n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                    "[C2C] Command failed in slave!\n");
+                FWK_LOG_INFO("[C2C] Command failed in slave!");
                 return FWK_E_STATE;
             }
         }
         break;
 
     default:
-        n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                   "[C2C] Unsupported command\n");
+        FWK_LOG_INFO("[C2C] Unsupported command");
         return FWK_E_DEVICE;
     }
 
@@ -584,8 +570,7 @@ static int n1sdp_c2c_wait_for_next_command(void)
                                            &n1sdp_c2c_ctx.slave_rx_data[0],
                                            N1SDP_C2C_DATA_SIZE);
     if (status != FWK_SUCCESS) {
-        n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                   "[C2C] Error setting up read transfer!\n");
+        FWK_LOG_INFO("[C2C] Error setting up read transfer!");
         return status;
     }
 
@@ -700,29 +685,27 @@ static int n1sdp_c2c_process_command(void)
          */
         switch (rx_data[2]) {
         case MOD_PD_TYPE_CORE:
-            status = n1sdp_c2c_ctx.pd_api->set_composite_state(
+            status = n1sdp_c2c_ctx.pd_api->set_state(
                 FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, rx_data[1]),
-                MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2, 0, MOD_PD_STATE_ON,
-                    MOD_PD_STATE_ON, MOD_PD_STATE_OFF));
+                MOD_PD_COMPOSITE_STATE(
+                    MOD_PD_LEVEL_0, 0, 0, 0, MOD_PD_STATE_OFF));
             if (status != FWK_SUCCESS)
                 goto error;
             break;
 
         case MOD_PD_TYPE_CLUSTER:
         case MOD_PD_TYPE_DEVICE_DEBUG:
-            status = n1sdp_c2c_ctx.pd_api->set_composite_state(
+            status = n1sdp_c2c_ctx.pd_api->set_state(
                 FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, rx_data[1]),
-                MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2, 0, MOD_PD_STATE_ON,
-                    MOD_PD_STATE_OFF, MOD_PD_STATE_OFF));
+                MOD_PD_STATE_OFF);
             if (status != FWK_SUCCESS)
                 goto error;
             break;
 
         case MOD_PD_TYPE_SYSTEM:
-            status = n1sdp_c2c_ctx.pd_api->set_composite_state(
+            status = n1sdp_c2c_ctx.pd_api->set_state(
                 FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, rx_data[1]),
-                MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2, 0, MOD_PD_STATE_ON,
-                    MOD_PD_STATE_OFF, MOD_PD_STATE_OFF));
+                MOD_PD_STATE_OFF);
             if (status != FWK_SUCCESS)
                 goto error;
             break;
@@ -741,29 +724,31 @@ static int n1sdp_c2c_process_command(void)
          */
         switch (rx_data[2]) {
         case MOD_PD_TYPE_CORE:
-            status = n1sdp_c2c_ctx.pd_api->set_composite_state(
+            status = n1sdp_c2c_ctx.pd_api->set_state(
                 FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, rx_data[1]),
-                MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2, 0, MOD_PD_STATE_ON,
-                    MOD_PD_STATE_ON, MOD_PD_STATE_ON));
+                MOD_PD_COMPOSITE_STATE(
+                    MOD_PD_LEVEL_2,
+                    0,
+                    MOD_PD_STATE_ON,
+                    MOD_PD_STATE_ON,
+                    MOD_PD_STATE_ON));
             if (status != FWK_SUCCESS)
                 goto error;
             break;
 
         case MOD_PD_TYPE_CLUSTER:
         case MOD_PD_TYPE_DEVICE_DEBUG:
-            status = n1sdp_c2c_ctx.pd_api->set_composite_state(
+            status = n1sdp_c2c_ctx.pd_api->set_state(
                 FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, rx_data[1]),
-                MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2, 0, MOD_PD_STATE_ON,
-                    MOD_PD_STATE_ON, MOD_PD_STATE_OFF));
+                MOD_PD_STATE_ON);
             if (status != FWK_SUCCESS)
                 goto error;
             break;
 
         case MOD_PD_TYPE_SYSTEM:
-            status = n1sdp_c2c_ctx.pd_api->set_composite_state(
+            status = n1sdp_c2c_ctx.pd_api->set_state(
                 FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN, rx_data[1]),
-                MOD_PD_COMPOSITE_STATE(MOD_PD_LEVEL_2, 0, MOD_PD_STATE_ON,
-                    MOD_PD_STATE_OFF, MOD_PD_STATE_OFF));
+                MOD_PD_STATE_ON);
             if (status != FWK_SUCCESS)
                 goto error;
             break;
@@ -802,24 +787,21 @@ static int n1sdp_c2c_process_command(void)
          */
         switch (rx_data[1]) {
         case MOD_PD_SYSTEM_SHUTDOWN:
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                "[C2C] Request PCC for system shutdown\n");
+            FWK_LOG_INFO("[C2C] Request PCC for system shutdown");
             status = n1sdp_c2c_ctx.scp2pcc_api->send(NULL, 0,
                                                      SCP2PCC_TYPE_SHUTDOWN);
             fwk_assert(status == FWK_SUCCESS);
             break;
 
         case MOD_PD_SYSTEM_COLD_RESET:
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                "[C2C] Request PCC for system reboot\n");
+            FWK_LOG_INFO("[C2C] Request PCC for system reboot");
             status = n1sdp_c2c_ctx.scp2pcc_api->send(NULL, 0,
                                                      SCP2PCC_TYPE_REBOOT);
             fwk_assert(status == FWK_SUCCESS);
             break;
 
         default:
-            n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                "[C2C] Unknown shutdown command!\n");
+            FWK_LOG_INFO("[C2C] Unknown shutdown command!");
             status = FWK_E_PARAM;
             break;
         }
@@ -827,8 +809,7 @@ static int n1sdp_c2c_process_command(void)
         break;
 
     default:
-        n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                   "[C2C] Unsupported command %d\n", cmd);
+        FWK_LOG_INFO("[C2C] Unsupported command %d", cmd);
         status = FWK_E_SUPPORT;
     }
 
@@ -842,8 +823,7 @@ error:
         n1sdp_c2c_ctx.config->i2c_id,
         &n1sdp_c2c_ctx.slave_tx_data[0], N1SDP_C2C_DATA_SIZE);
     if (status != FWK_SUCCESS) {
-        n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                   "[C2C] Error setting up write transfer!\n");
+        FWK_LOG_INFO("[C2C] Error setting up write transfer!");
         return status;
     }
 
@@ -911,8 +891,7 @@ static int n1sdp_c2c_pd_set_state(enum n1sdp_c2c_cmd cmd, uint8_t pd_id,
         return status;
 
     if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-        n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                   "[C2C] PD request failed!\n");
+        FWK_LOG_INFO("[C2C] PD request failed!");
         return FWK_E_STATE;
     }
 
@@ -955,8 +934,7 @@ static int n1sdp_c2c_pd_get_state(enum n1sdp_c2c_cmd cmd, uint8_t pd_id,
      * master_rx_data[1] contains the current PD state in target
      */
     if (n1sdp_c2c_ctx.master_rx_data[0] != N1SDP_C2C_SUCCESS) {
-        n1sdp_c2c_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                   "[C2C] PD request failed!\n");
+        FWK_LOG_INFO("[C2C] PD request failed!");
         return FWK_E_STATE;
     }
 
@@ -1015,11 +993,6 @@ static int n1sdp_c2c_bind(fwk_id_t id, unsigned int round)
         return FWK_SUCCESS;
 
     if (round == 0) {
-        status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-                                 MOD_LOG_API_ID, &n1sdp_c2c_ctx.log_api);
-        if (status != FWK_SUCCESS)
-            return status;
-
         status = fwk_module_bind(n1sdp_c2c_ctx.config->ccix_id,
                                  FWK_ID_API(FWK_MODULE_IDX_N1SDP_PCIE,
                                             N1SDP_PCIE_API_IDX_PCIE_INIT),

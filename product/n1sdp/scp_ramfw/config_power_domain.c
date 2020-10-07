@@ -5,22 +5,24 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <fwk_element.h>
-#include <fwk_macros.h>
-#include <fwk_mm.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
+#include "config_power_domain.h"
+#include "config_ppu_v0.h"
+#include "n1sdp_core.h"
+#include "n1sdp_power_domain.h"
+
 #include <mod_n1sdp_remote_pd.h>
-#include <mod_system_power.h>
 #include <mod_power_domain.h>
 #include <mod_ppu_v1.h>
-#include <n1sdp_core.h>
-#include <n1sdp_power_domain.h>
-#include <config_power_domain.h>
-#include <config_ppu_v0.h>
+#include <mod_system_power.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_macros.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+
+#include <stdint.h>
+#include <stdio.h>
 
 /* Maximum power domain name size including the null terminator */
 #define PD_NAME_SIZE 16
@@ -115,8 +117,7 @@ static struct fwk_element n1sdp_pd_single_chip_element_table[] = {
         .name = "CLUS0CORE0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 0, 0, 0),
+            .parent_idx = PD_SINGLE_CHIP_IDX_CLUSTER0,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 0),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -130,8 +131,7 @@ static struct fwk_element n1sdp_pd_single_chip_element_table[] = {
         .name = "CLUS0CORE1",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 0, 0, 1),
+            .parent_idx = PD_SINGLE_CHIP_IDX_CLUSTER0,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 1),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -145,8 +145,7 @@ static struct fwk_element n1sdp_pd_single_chip_element_table[] = {
         .name = "CLUS1CORE0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 0, 1, 0),
+            .parent_idx = PD_SINGLE_CHIP_IDX_CLUSTER1,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 2),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -160,8 +159,7 @@ static struct fwk_element n1sdp_pd_single_chip_element_table[] = {
         .name = "CLUS1CORE1",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 0, 1, 1),
+            .parent_idx = PD_SINGLE_CHIP_IDX_CLUSTER1,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 3),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -175,8 +173,7 @@ static struct fwk_element n1sdp_pd_single_chip_element_table[] = {
         .name = "CLUS0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CLUSTER,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_1, 0, 0, 0, 0),
+            .parent_idx = PD_SINGLE_CHIP_IDX_SYSTOP0,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 4),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -190,8 +187,7 @@ static struct fwk_element n1sdp_pd_single_chip_element_table[] = {
         .name = "CLUS1",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CLUSTER,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_1, 0, 0, 1, 0),
+            .parent_idx = PD_SINGLE_CHIP_IDX_SYSTOP0,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 5),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -205,8 +201,7 @@ static struct fwk_element n1sdp_pd_single_chip_element_table[] = {
         .name = "DBGTOP0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_DEVICE_DEBUG,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_1, 0, 0, 2, 0),
+            .parent_idx = PD_SINGLE_CHIP_IDX_SYSTOP0,
             .driver_id = FWK_ID_ELEMENT_INIT(
                 FWK_MODULE_IDX_PPU_V0, PPU_V0_ELEMENT_IDX_DBGTOP),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_PPU_V0, 0),
@@ -219,8 +214,7 @@ static struct fwk_element n1sdp_pd_single_chip_element_table[] = {
         .name = "SYSTOP0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_SYSTEM,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_2, 0, 0, 0, 0),
+            .parent_idx = PD_SINGLE_CHIP_IDX_NONE,
             .driver_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_SYSTEM_POWER),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_SYSTEM_POWER,
@@ -238,8 +232,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "CLUS0CORE0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 0, 0, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_CLUSTER0,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 0),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -253,8 +246,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "CLUS0CORE1",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 0, 0, 1),
+            .parent_idx = PD_MULTI_CHIP_IDX_CLUSTER0,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 1),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -268,8 +260,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "CLUS1CORE0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 0, 1, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_CLUSTER1,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 2),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -283,8 +274,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "CLUS1CORE1",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 0, 1, 1),
+            .parent_idx = PD_MULTI_CHIP_IDX_CLUSTER1,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 3),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -298,8 +288,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SLV-CLUS0CORE0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 1, 0, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_CLUSTER2,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
                                              0),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
@@ -313,8 +302,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SLV-CLUS0CORE1",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 1, 0, 1),
+            .parent_idx = PD_MULTI_CHIP_IDX_CLUSTER2,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
                                              1),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
@@ -328,8 +316,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SLV-CLUS1CORE0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 1, 1, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_CLUSTER3,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
                                              2),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
@@ -343,8 +330,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SLV-CLUS1CORE1",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CORE,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_0, 0, 1, 1, 1),
+            .parent_idx = PD_MULTI_CHIP_IDX_CLUSTER3,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
                                              3),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
@@ -358,8 +344,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "CLUS0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CLUSTER,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_1, 0, 0, 0, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_SYSTOP0,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 4),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -373,8 +358,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "CLUS1",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CLUSTER,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_1, 0, 0, 1, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_SYSTOP0,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PPU_V1, 5),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_PPU_V1,
@@ -388,8 +372,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "DBGTOP",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_DEVICE_DEBUG,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_1, 0, 0, 2, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_SYSTOP0,
             .driver_id = FWK_ID_ELEMENT_INIT(
                 FWK_MODULE_IDX_PPU_V0, PPU_V0_ELEMENT_IDX_DBGTOP),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_PPU_V0, 0),
@@ -402,8 +385,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SLV-CLUS0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CLUSTER,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_1, 0, 1, 0, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_SYSTOP1,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
                                              4),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
@@ -417,8 +399,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SLV-CLUS1",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_CLUSTER,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_1, 0, 1, 1, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_SYSTOP1,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
                                              5),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
@@ -432,8 +413,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SLV-DBGTOP",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_DEVICE_DEBUG,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_1, 0, 1, 2, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_SYSTOP1,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
                                              6),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
@@ -447,8 +427,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SYSTOP0",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_SYSTEM,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_2, 0, 0, 0, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_SYSTOP_LOGICAL,
             .driver_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_SYSTEM_POWER),
             .api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_SYSTEM_POWER,
@@ -462,8 +441,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SLV-SYSTOP",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_SYSTEM,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_2, 0, 1, 0, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_SYSTOP_LOGICAL,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
                                              7),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
@@ -477,8 +455,7 @@ static struct fwk_element n1sdp_pd_multi_chip_element_table[] = {
         .name = "SYSTOP-LOGICAL",
         .data = &((struct mod_power_domain_element_config) {
             .attributes.pd_type = MOD_PD_TYPE_SYSTEM,
-            .tree_pos = MOD_PD_TREE_POS(
-                MOD_PD_LEVEL_3, 0, 0, 0, 0),
+            .parent_idx = PD_MULTI_CHIP_IDX_NONE,
             .driver_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
                                              8),
             .api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_N1SDP_REMOTE_PD,
@@ -507,6 +484,8 @@ static const struct fwk_element *n1sdp_power_domain_get_element_table
  * Power module configuration data
  */
 const struct fwk_module_config config_power_domain = {
-    .get_element_table = n1sdp_power_domain_get_element_table,
     .data = &n1sdp_power_domain_config,
+
+    .elements =
+        FWK_MODULE_DYNAMIC_ELEMENTS(n1sdp_power_domain_get_element_table),
 };

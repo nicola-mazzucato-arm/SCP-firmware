@@ -8,13 +8,14 @@
 #ifndef MOD_SYNQUACER_MEMC_H
 #define MOD_SYNQUACER_MEMC_H
 
-#include <stdint.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 
+#include <stdint.h>
+
 /*!
  * \addtogroup GroupSYNQUACERModule SYNQUACER Product Modules
- * @{
+ * \{
  */
 
 /*!
@@ -24,15 +25,15 @@
  *
  * \details This module implements a device driver for the memory controller
  *
- * @{
+ * \{
  */
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_SYNQUACER_MEMC_H */

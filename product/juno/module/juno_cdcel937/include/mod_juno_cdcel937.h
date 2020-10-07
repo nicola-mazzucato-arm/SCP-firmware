@@ -8,21 +8,24 @@
 #ifndef MOD_JUNO_CDCEL937_H
 #define MOD_JUNO_CDCEL937_H
 
-#include <stdint.h>
+#include "juno_clock.h"
+
+#include <mod_clock.h>
+
 #include <fwk_id.h>
 #include <fwk_module_idx.h>
-#include <mod_clock.h>
-#include <juno_clock.h>
+
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupJUNOCDCEL937 JUNO CDCEL937
  *
- * @{
+ * \{
  */
 
 /*! Define whether the output Y1 is used */
@@ -110,11 +113,11 @@ static const fwk_id_t mod_juno_cdcel937_api_id_hdlcd_driver =
         MOD_JUNO_CDCEL937_API_IDX_HDLCD_DRIVER);
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_JUNO_CDCEL937_H */

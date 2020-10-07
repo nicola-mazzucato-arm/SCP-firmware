@@ -11,11 +11,15 @@
 #ifndef MOD_JUNO_DMC400_H
 #define MOD_JUNO_DMC400_H
 
-#include <stdint.h>
-#include <fwk_macros.h>
-#include <mod_log.h>
+#include "scp_config.h"
+
 #include <mod_timer.h>
-#include <scp_config.h>
+
+#include <fwk_id.h>
+#include <fwk_macros.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /*!
  * \ingroup GroupJunoModule
@@ -54,7 +58,6 @@
 struct mod_juno_dmc400_reg {
     /*!
      * \cond
-     * @{
      */
     FWK_R   uint32_t MEMC_STATUS;
     FWK_R   uint32_t MEMC_CONFIG;
@@ -184,9 +187,8 @@ struct mod_juno_dmc400_reg {
     FWK_R   uint32_t COMPONENT_ID_2;
     FWK_R   uint32_t COMPONENT_ID_3;
     /*!
-    * \endcond
-    * @}
-    */
+     * \endcond
+     */
 };
 
 /*!
@@ -429,8 +431,8 @@ struct mod_juno_dmc400_ddr_phy_api {
      * \param element_id Element identifier corresponding to the device to
      *      configure.
      *
-     * \retval FWK_E_DATA No data found for the element.
-     * \retval FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_DATA No data found for the element.
+     * \retval ::FWK_SUCCESS Operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*configure_ddr)(fwk_id_t element_id);
@@ -441,7 +443,7 @@ struct mod_juno_dmc400_ddr_phy_api {
      * \param module_id Module identifier corresponding to the device to
      *      configure.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_SUCCESS Operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*configure_clk)(fwk_id_t module_id);
@@ -452,8 +454,8 @@ struct mod_juno_dmc400_ddr_phy_api {
      * \param element_id Element identifier corresponding to the device to
      *      configure.
      *
-     * \retval FWK_E_DATA No data found for the element.
-     * \retval FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_DATA No data found for the element.
+     * \retval ::FWK_SUCCESS Operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*configure_idle)(fwk_id_t element_id);
@@ -465,14 +467,14 @@ struct mod_juno_dmc400_ddr_phy_api {
      *      configure.
      * \param enable Flag to indicate the retention operation.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_SUCCESS Operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*configure_retention)(fwk_id_t module_id, bool enable);
 };
 
 /*!
- * @}
+ * \}
  */
 
 #endif  /* MOD_JUNO_DMC400_H */

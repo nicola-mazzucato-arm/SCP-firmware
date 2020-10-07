@@ -5,16 +5,22 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <fwk_id.h>
-#include <fwk_macros.h>
-#include <fwk_mm.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <scp_rdn1e1_irq.h>
+#include "rdn1e1_core.h"
+
+#include <mod_power_domain.h>
+#include <mod_ppu_v1.h>
 #include <mod_rdn1e1_system.h>
 #include <mod_system_power.h>
-#include <mod_ppu_v1.h>
-#include <rdn1e1_core.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_macros.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+
+#include <fmw_cmsis.h>
+
+#include <stdint.h>
 
 static const uint8_t system_power_to_sys_ppu0_state[] = {
     [MOD_PD_STATE_ON]                     = (uint8_t)MOD_PD_STATE_ON,
@@ -83,6 +89,6 @@ static const struct fwk_element *rdn1e1_system_get_element_table(
 }
 
 const struct fwk_module_config config_system_power = {
-    .get_element_table = rdn1e1_system_get_element_table,
     .data = &system_power_config,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(rdn1e1_system_get_element_table),
 };

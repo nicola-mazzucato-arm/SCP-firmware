@@ -5,13 +5,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <synquacer_debug.h>
-#include <cmsis_compiler.h>
+#include "system_clock.h"
+
 #include <rtx_lib.c>
 #include <rtx_os.h>
-#include <system_clock.h>
+
+#include <mod_synquacer_system.h>
+
+#include <fwk_log.h>
+#include <fwk_mm.h>
+
+#include <fmw_cmsis.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /*
  * Required by RTX to configure the SysTick timer.
@@ -42,7 +49,7 @@ uint32_t osRtxErrorNotify(uint32_t code, void *object_id)
          * Stack underflow detected for thread
          * thread_id=object_id
          */
-        SYNQUACER_DEV_LOG_ERROR("[SYSTEM] osRtxErrorStackUnderflow.\n");
+        FWK_LOG_ERR("[SYSTEM] osRtxErrorStackUnderflow.");
         break;
 
     case osRtxErrorISRQueueOverflow:
@@ -50,7 +57,7 @@ uint32_t osRtxErrorNotify(uint32_t code, void *object_id)
          * ISR Queue overflow detected when inserting object
          * object_id
          */
-        SYNQUACER_DEV_LOG_ERROR("[SYSTEM] osRtxErrorISRQueueOverflow.\n");
+        FWK_LOG_ERR("[SYSTEM] osRtxErrorISRQueueOverflow.");
         break;
 
     case osRtxErrorTimerQueueOverflow:
@@ -58,7 +65,7 @@ uint32_t osRtxErrorNotify(uint32_t code, void *object_id)
          * User Timer Callback Queue overflow detected for timer
          * timer_id=object_id
          */
-        SYNQUACER_DEV_LOG_ERROR("[SYSTEM] osRtxErrorTimerQueueOverflow.\n");
+        FWK_LOG_ERR("[SYSTEM] osRtxErrorTimerQueueOverflow.");
         break;
 
     case osRtxErrorClibSpace:
@@ -66,14 +73,14 @@ uint32_t osRtxErrorNotify(uint32_t code, void *object_id)
          * Standard C/C++ library libspace not available:
          * increase OS_THREAD_LIBSPACE_NUM
          */
-        SYNQUACER_DEV_LOG_ERROR("[SYSTEM] osRtxErrorClibSpace.\n");
+        FWK_LOG_ERR("[SYSTEM] osRtxErrorClibSpace.");
         break;
 
     case osRtxErrorClibMutex:
         /*
          * Standard C/C++ library mutex initialization failed
          */
-        SYNQUACER_DEV_LOG_ERROR("[SYSTEM] oosRtxErrorClibMutex.\n");
+        FWK_LOG_ERR("[SYSTEM] oosRtxErrorClibMutex.");
         break;
 
     default:
@@ -81,4 +88,21 @@ uint32_t osRtxErrorNotify(uint32_t code, void *object_id)
     }
 
     osRtxIdleThread(object_id);
+}
+
+uint32_t osRtxMemoryInit(void *mem, uint32_t size)
+{
+    return 1;
+}
+
+void *osRtxMemoryAlloc(void *mem, uint32_t size, uint32_t type)
+{
+    return fwk_mm_alloc(1, size);
+}
+
+uint32_t osRtxMemoryFree(void *mem, void *block)
+{
+    fwk_mm_free(block);
+
+    return 1;
 }

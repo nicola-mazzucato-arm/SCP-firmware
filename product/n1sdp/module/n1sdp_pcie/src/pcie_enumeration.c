@@ -14,16 +14,21 @@
  * fault when reading the configuration space.
  */
 
+#include "n1sdp_scp_mmap.h"
+
+#include <n1sdp_pcie.h>
+
+#include <mod_n1sdp_pcie.h>
+
+#include <fwk_assert.h>
+#include <fwk_attributes.h>
+#include <fwk_macros.h>
+
+#include <fmw_cmsis.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <cmsis_compiler.h>
-#include <fwk_assert.h>
-#include <fwk_macros.h>
-#include <fwk_status.h>
-#include <mod_n1sdp_pcie.h>
-#include <n1sdp_pcie.h>
-#include <n1sdp_scp_mmap.h>
 
 /* PCIe configuration space offset definitions */
 #define PCIE_HEADER_TYPE_OFFSET         0xE
@@ -94,7 +99,7 @@ static bool checked_read_u32(uint32_t *const value, const uint32_t *const src);
  */
 void pcie_init_bdf_table(struct n1sdp_pcie_dev_config *config)
 {
-    assert(config != NULL);
+    fwk_assert(config != NULL);
     struct bdf_table *table;
 
     /* Set BDF table pointer based on the root complex */
@@ -204,7 +209,7 @@ static uint8_t pcie_bus_scan(uint32_t ecam_addr,
 
 void pcie_bus_enumeration(struct n1sdp_pcie_dev_config *config)
 {
-    assert(config != NULL);
+    fwk_assert(config != NULL);
 
     uint32_t ecam_base_addr = config->axi_slave_base32;
     uint8_t pri_bnum, sec_bnum, sub_bnum;
@@ -267,7 +272,7 @@ void pcie_bus_enumeration(struct n1sdp_pcie_dev_config *config)
 /*!
  * \brief Callee context at exception
  */
-struct __attribute((packed)) context {
+struct FWK_PACKED context {
     uint32_t r0;
     uint32_t r1;
     uint32_t r2;
@@ -297,8 +302,9 @@ struct __attribute((packed)) context {
 
 #define EXCEPTION_BUSFAULT 5
 
-__attribute__((noinline)) /* only one location where the checked load happen */
-static bool checked_read_u32(uint32_t *const value, const uint32_t *const src)
+FWK_NOINLINE /* only one location where the checked load happen */
+    static bool
+    checked_read_u32(uint32_t *const value, const uint32_t *const src)
 {
     uint32_t err;
     uint32_t dst;
@@ -341,7 +347,7 @@ static bool exception_handler(const int exception,
     return false;
 }
 
-void arm_exception_invalid(void)
+void arch_exception_invalid(void)
 {
     struct context *context;
     __asm__ volatile(

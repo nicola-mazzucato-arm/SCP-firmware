@@ -18,14 +18,14 @@ BS_FIRMWARE_MODULE_HEADERS_ONLY := \
 BS_FIRMWARE_MODULES := \
     pl011 \
     clock \
-    log \
-    sgi575_rom \
-    gtimer
+    gtimer \
+    bootloader \
+    isys_rom
 
 BS_FIRMWARE_SOURCES := \
-    config_log.c \
+    config_bootloader.c \
     config_clock.c \
-    config_sgi575_rom.c \
-    config_gtimer.c
+    config_gtimer.c \
+    config_pl011.c
 
 include $(BS_DIR)/firmware.mk

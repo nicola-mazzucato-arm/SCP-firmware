@@ -1,4 +1,4 @@
- /*
+/*
  * Arm SCP/MCP Software
  * Copyright (c) 2015-2020, Arm Limited and Contributors. All rights reserved.
  *
@@ -10,21 +10,21 @@
 #ifndef MOD_DDR_PHY500_H
 #define MOD_DDR_PHY500_H
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
-#include <mod_log.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
  * \addtogroup GroupDDR DDR PHY500 Driver
- * @{
+ * \{
  */
 
 /*!
@@ -33,7 +33,6 @@
 struct mod_ddr_phy500_reg {
     /*!
      * \cond
-     * @{
      */
     FWK_RW  uint32_t      INIT_COMPLETE;
     FWK_RW  uint32_t      MEMORY_WIDTH;
@@ -61,7 +60,6 @@ struct mod_ddr_phy500_reg {
     FWK_RW  uint32_t      T_CTRL_UPD_MIN;
     /*!
      * \endcond
-     * @}
      */
 };
 
@@ -98,11 +96,11 @@ struct mod_ddr_phy500_module_config {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_DDR_PHY500_H */

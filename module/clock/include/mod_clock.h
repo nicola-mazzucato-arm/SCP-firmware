@@ -8,13 +8,15 @@
 #ifndef MOD_CLOCK_H
 #define MOD_CLOCK_H
 
-#include <stdint.h>
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_module_idx.h>
+
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
@@ -22,7 +24,7 @@
  *
  * \details A Hardware Abstraction Layer for configuring clock devices.
  *
- * @{
+ * \{
  */
 
 /*!
@@ -30,7 +32,7 @@
  */
 enum mod_clock_state {
     /*! The clock is stopped */
-    MOD_CLOCK_STATE_STOPPED,
+    MOD_CLOCK_STATE_STOPPED = 0,
 
     /*! The clock is running */
     MOD_CLOCK_STATE_RUNNING,
@@ -53,9 +55,9 @@ enum mod_clock_notification_idx {
     MOD_CLOCK_NOTIFICATION_IDX_COUNT
 };
 
-#if BUILD_HAS_MOD_CLOCK
+#ifdef BUILD_HAS_MOD_CLOCK
 /*!
- * \brief Identifier for the \ref MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGED
+ * \brief Identifier for the ::MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGED
  *     notification.
  */
 static const fwk_id_t mod_clock_notification_id_state_changed =
@@ -64,8 +66,8 @@ static const fwk_id_t mod_clock_notification_id_state_changed =
         MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGED);
 
 /*!
- * \brief Identifier for the \ref
- *     MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGE_PENDING notification
+ * \brief Identifier for the ::MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGE_PENDING
+ * notification
  */
 static const fwk_id_t mod_clock_notification_id_state_change_pending =
     FWK_ID_NOTIFICATION_INIT(
@@ -75,8 +77,8 @@ static const fwk_id_t mod_clock_notification_id_state_change_pending =
 
 /*!
  * \brief Event parameters shared by the
- *     \ref MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGED and
- *     \ref MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGE_PENDING notifications.
+ *     ::MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGED and
+ *     ::MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGE_PENDING notifications.
  */
 struct clock_notification_params {
     /*!
@@ -88,12 +90,12 @@ struct clock_notification_params {
 
 /*!
  * \brief Response parameters for the
- *     \ref MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGE_PENDING notification.
+ *     ::MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGE_PENDING notification.
  */
 struct clock_state_change_pending_resp_params {
     /*!
      * The status returned by the notified subscriber on processing the
-     * \ref MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGE_PENDING notification.
+     * ::MOD_CLOCK_NOTIFICATION_IDX_STATE_CHANGE_PENDING notification.
      */
     int status;
 };
@@ -152,7 +154,7 @@ struct mod_clock_config {
      *     order to receive notifications of power domain transitions that have
      *     already occurred.
      *
-     * \note May be \ref FWK_ID_NONE to disable this functionality for all
+     * \note May be ::FWK_ID_NONE to disable this functionality for all
      *     elements.
      */
     const fwk_id_t pd_transition_notification_id;
@@ -162,7 +164,7 @@ struct mod_clock_config {
      *     order to receive notifications of power domain transitions that are
      *     about to occur.
      *
-     * \note May be \ref FWK_ID_NONE to disable this functionality for all
+     * \note May be ::FWK_ID_NONE to disable this functionality for all
      *     elements.
      */
     const fwk_id_t pd_pre_transition_notification_id;
@@ -205,11 +207,13 @@ struct mod_clock_range {
     uint64_t max;
 
     /*!
-     * The number of Hertz by which the rate can be incremented at each step
-     * throughout the clock's range. Valid only when rate_type is equal to
-     * \ref mod_clock_rate_type.MOD_CLOCK_RATE_TYPE_CONTINUOUS, as clocks that
-     * use \ref mod_clock_rate_type.MOD_CLOCK_RATE_TYPE_DISCRETE may not have a
-     * regular step between their rates.
+     * \brief Number of Hertz by which the rate can be incremented at each step
+     *      throughout the clock's range.
+     *
+     * \warning Valid only when rate_type is equal to
+     *      ::MOD_CLOCK_RATE_TYPE_CONTINUOUS, as clocks that use
+     *      ::MOD_CLOCK_RATE_TYPE_DISCRETE may not have a regular step between
+     *      their rates.
      */
     uint64_t step;
 
@@ -253,9 +257,9 @@ struct mod_clock_drv_api {
      * \param round_mode The type of rounding to perform, if required, to
      *      achieve the given rate.
      *
-     * \retval FWK_PENDING The request is pending. The driver will provide the
+     * \retval ::FWK_PENDING The request is pending. The driver will provide the
      *      requested value later through the driver response API.
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*set_rate)(fwk_id_t clock_id, uint64_t rate,
@@ -268,9 +272,9 @@ struct mod_clock_drv_api {
      *
      * \param[out] rate The current clock rate in Hertz.
      *
-     * \retval FWK_PENDING The request is pending. The driver will provide the
+     * \retval ::FWK_PENDING The request is pending. The driver will provide the
      *      requested value later through the driver response API.
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*get_rate)(fwk_id_t clock_id, uint64_t *rate);
@@ -284,7 +288,7 @@ struct mod_clock_drv_api {
      *
      * \param[out] rate The rate, in Hertz, corresponding to the index.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*get_rate_from_index)(fwk_id_t clock_id, unsigned int rate_index,
@@ -297,9 +301,9 @@ struct mod_clock_drv_api {
      *
      * \param state One of the valid clock states.
      *
-     * \retval FWK_PENDING The request is pending. The driver will provide the
+     * \retval ::FWK_PENDING The request is pending. The driver will provide the
      *      requested value later through the driver response API.
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*set_state)(fwk_id_t clock_id, enum mod_clock_state state);
@@ -311,9 +315,9 @@ struct mod_clock_drv_api {
      *
      * \param[out] state The current clock state.
      *
-     * \retval FWK_PENDING The request is pending. The driver will provide the
+     * \retval ::FWK_PENDING The request is pending. The driver will provide the
      *      requested value later through the driver response API.
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*get_state)(fwk_id_t clock_id, enum mod_clock_state *state);
@@ -325,7 +329,7 @@ struct mod_clock_drv_api {
      *
      * \param[out] range The clock range structure.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*get_range)(fwk_id_t clock_id, struct mod_clock_range *range);
@@ -350,7 +354,7 @@ struct mod_clock_drv_api {
      * \param new_state The power state that the clock's power domain will
      *     transition to.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*process_pending_power_transition)(
@@ -377,7 +381,7 @@ struct mod_clock_drv_api {
      * \param state The power state that the clock's power domain transitioned
      *     to.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard framework error codes.
      */
     int (*process_power_transition)(fwk_id_t clock_id, unsigned int state);
@@ -397,11 +401,11 @@ struct mod_clock_api {
      * \param round_mode The type of rounding to perform, if required, to
      *      achieve the given rate.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
-     * \retval FWK_PENDING The request is pending. The result for this operation
-     *      will be provided via a response event.
-     * \retval FWK_E_PARAM The clock identifier was invalid.
-     * \retval FWK_E_SUPPORT Deferred handling of asynchronous drivers is not
+     * \retval ::FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_PENDING The request is pending. The result for this
+     *      operation will be provided via a response event.
+     * \retval ::FWK_E_PARAM The clock identifier was invalid.
+     * \retval ::FWK_E_SUPPORT Deferred handling of asynchronous drivers is not
      *      supported.
      * \return One of the standard framework error codes.
      */
@@ -415,12 +419,13 @@ struct mod_clock_api {
      *
      * \param[out] rate The current clock rate in Hertz.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
-     * \retval FWK_PENDING The request is pending. The requested rate will be
+     * \retval ::FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_PENDING The request is pending. The requested rate will be
      *      provided via a response event.
-     * \retval FWK_E_PARAM The clock identifier was invalid.
-     * \retval FWK_E_PARAM The rate pointer was NULL.
-     * \retval FWK_E_SUPPORT Deferred handling of asynchronous drivers is not
+     * \retval ::FWK_E_PARAM An invalid parameter was encountered:
+     *      - The `clock_id` parameter was not a valid system entity identifier.
+     *      - The `rate` parameter was a null pointer value.
+     * \retval ::FWK_E_SUPPORT Deferred handling of asynchronous drivers is not
      *      supported.
      * \return One of the standard framework error codes.
      */
@@ -435,9 +440,10 @@ struct mod_clock_api {
      *
      * \param[out] rate The rate, in Hertz, corresponding to the index.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
-     * \retval FWK_E_PARAM The clock identifier was invalid.
-     * \retval FWK_E_PARAM The rate pointer was NULL.
+     * \retval ::FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_E_PARAM An invalid parameter was encountered:
+     *      - The `clock_id` parameter was not a valid system entity identifier.
+     *      - The `rate` parameter was a null pointer value.
      * \return One of the standard framework error codes.
      */
     int (*get_rate_from_index)(fwk_id_t clock_id, unsigned int rate_index,
@@ -450,11 +456,11 @@ struct mod_clock_api {
      *
      * \param state One of the valid clock states.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
-     * \retval FWK_PENDING The request is pending. The result for this operation
-     *      will be provided via a response event.
-     * \retval FWK_E_PARAM The clock identifier was invalid.
-     * \retval FWK_E_SUPPORT Deferred handling of asynchronous drivers is not
+     * \retval ::FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_PENDING The request is pending. The result for this
+     *      operation will be provided via a response event.
+     * \retval ::FWK_E_PARAM The clock identifier was invalid.
+     * \retval ::FWK_E_SUPPORT Deferred handling of asynchronous drivers is not
      *      supported.
      * \return One of the standard framework error codes.
      */
@@ -467,12 +473,13 @@ struct mod_clock_api {
      *
      * \param[out] state The current clock state.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
-     * \retval FWK_PENDING The request is pending. The requested state will be
+     * \retval ::FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_PENDING The request is pending. The requested state will be
      *      provided via a response event.
-     * \retval FWK_E_PARAM The clock identifier was invalid.
-     * \retval FWK_E_PARAM The state pointer was NULL.
-     * \retval FWK_E_SUPPORT Deferred handling of asynchronous drivers is not
+     * \retval ::FWK_E_PARAM An invalid parameter was encountered:
+     *      - The `clock_id` parameter was not a valid system entity identifier.
+     *      - The `state` parameter was a null pointer value.
+     * \retval ::FWK_E_SUPPORT Deferred handling of asynchronous drivers is not
      *      supported.
      * \return One of the standard framework error codes.
      */
@@ -485,9 +492,10 @@ struct mod_clock_api {
      *
      * \param[out] info The clock device properties.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
-     * \retval FWK_E_PARAM The clock identifier was invalid.
-     * \retval FWK_E_PARAM The info pointer was NULL.
+     * \retval ::FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_E_PARAM An invalid parameter was encountered:
+     *      - The `clock_id` parameter was not a valid system entity identifier.
+     *      - The `info` parameter was a null pointer value.
      * \return One of the standard framework error codes.
      */
     int (*get_info)(fwk_id_t clock_id, struct mod_clock_info *info);
@@ -544,26 +552,46 @@ struct mod_clock_resp_params {
 };
 
 /*!
- * \brief Define the first exposed event handled by this module. Other internal
- *      events take indices after this.
+ * \brief Define the event identifiers for deferred responses.
  */
-#define MOD_CLOCK_EVENT_IDX_REQUEST     0
+enum mod_clock_event_idx {
+    MOD_CLOCK_EVENT_IDX_SET_RATE_REQUEST,
+    MOD_CLOCK_EVENT_IDX_GET_RATE_REQUEST,
+
+    MOD_CLOCK_EVENT_IDX_SET_STATE_REQUEST,
+    MOD_CLOCK_EVENT_IDX_GET_STATE_REQUEST,
+
+    MOD_CLOCK_EVENT_IDX_COUNT
+};
 
  /*!
- * \brief Request event identifier.
+ * \brief Request event identifiers.
  *
- * \details This identifier is used by the clients that expect to receive a
- *      response event from this module.
+ * \details These identifiers are used by the clients that expect to receive a
+ *      response event from this module when a request is deferred.
  */
-static const fwk_id_t mod_clock_event_id_request =
-    FWK_ID_EVENT_INIT(FWK_MODULE_IDX_CLOCK, MOD_CLOCK_EVENT_IDX_REQUEST);
+static const fwk_id_t mod_clock_event_id_set_rate_request =
+    FWK_ID_EVENT_INIT(FWK_MODULE_IDX_CLOCK,
+                      MOD_CLOCK_EVENT_IDX_SET_RATE_REQUEST);
+
+static const fwk_id_t mod_clock_event_id_get_rate_request =
+    FWK_ID_EVENT_INIT(FWK_MODULE_IDX_CLOCK,
+                      MOD_CLOCK_EVENT_IDX_GET_RATE_REQUEST);
+
+static const fwk_id_t mod_clock_event_id_set_state_request =
+    FWK_ID_EVENT_INIT(FWK_MODULE_IDX_CLOCK,
+                      MOD_CLOCK_EVENT_IDX_SET_STATE_REQUEST);
+
+static const fwk_id_t mod_clock_event_id_get_state_request =
+    FWK_ID_EVENT_INIT(FWK_MODULE_IDX_CLOCK,
+                      MOD_CLOCK_EVENT_IDX_GET_STATE_REQUEST);
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_CLOCK_H */

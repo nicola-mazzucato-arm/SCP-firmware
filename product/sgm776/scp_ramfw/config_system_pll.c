@@ -5,13 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "sgm776_pik.h"
+#include "sgm776_pik_scp.h"
+#include "system_mmap.h"
+
+#include <mod_system_pll.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
-#include <mod_system_pll.h>
-#include <sgm776_pik.h>
-#include <system_mmap.h>
+
+#include <stdbool.h>
+#include <stddef.h>
 
 static const struct fwk_element system_pll_element_table[] = {
     {
@@ -113,5 +119,5 @@ static const struct fwk_element *system_pll_get_element_table
 }
 
 const struct fwk_module_config config_system_pll = {
-    .get_element_table = system_pll_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(system_pll_get_element_table),
 };

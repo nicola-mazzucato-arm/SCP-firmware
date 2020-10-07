@@ -5,17 +5,23 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stddef.h>
+#include "config_power_domain.h"
+#include "sgm775_core.h"
+#include "sgm775_mmap.h"
+
+#include <mod_power_domain.h>
+#include <mod_ppu_v1.h>
+
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_power_domain.h>
-#include <mod_ppu_v1.h>
-#include <sgm775_core.h>
-#include <sgm775_irq.h>
-#include <sgm775_mmap.h>
-#include <config_power_domain.h>
+
+#include <fmw_cmsis.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 static const char *core_pd_name_table[SGM775_CORE_PER_CLUSTER_MAX] = {
     "CLUS0CORE0", "CLUS0CORE1", "CLUS0CORE2", "CLUS0CORE3",
@@ -87,7 +93,8 @@ static const struct fwk_element *sgm775_ppu_v1_get_element_table
 
     sgm775_ppu_v1_notification_config.pd_source_id = FWK_ID_ELEMENT(
         FWK_MODULE_IDX_POWER_DOMAIN,
-        CONFIG_POWER_DOMAIN_SYSTOP_CHILD_COUNT + sgm775_core_get_count());
+        CONFIG_POWER_DOMAIN_SYSTOP_SYSTEM + sgm775_core_get_count() +
+            sgm775_cluster_get_count());
 
     return element_table;
 }
@@ -96,6 +103,6 @@ static const struct fwk_element *sgm775_ppu_v1_get_element_table
  * Power module configuration data
  */
 struct fwk_module_config config_ppu_v1 = {
-    .get_element_table = sgm775_ppu_v1_get_element_table,
     .data = &sgm775_ppu_v1_notification_config,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(sgm775_ppu_v1_get_element_table),
 };

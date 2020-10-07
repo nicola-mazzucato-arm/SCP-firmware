@@ -10,12 +10,14 @@
 
 /*!
  * \cond
- * @{
  */
+
+#include <mod_timer.h>
+
+#include <fwk_macros.h>
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <fwk_macros.h>
 
 /*
  * PPU 1.1 register definitions
@@ -249,6 +251,15 @@ enum ppu_v1_edge_sensitivity {
 #define PPU_V1_IDR0_NUM_OPMODE        UINT32_C(0x000000F0)
 
 /*
+ * Timer context to be passed to set_power_mode function.
+ */
+struct ppu_v1_timer_ctx {
+    fwk_id_t timer_id;
+    struct mod_timer_api *timer_api;
+    uint32_t delay_us;
+};
+
+/*
  * Initializes the PPU by masking all interrupts and acknowledging any
  * previously pending interrupt.
  */
@@ -259,7 +270,10 @@ void ppu_v1_init(struct ppu_v1_reg *ppu);
  * Note: This function currently supports only synchronous transitions with
  *       limited error detection.
  */
-int ppu_v1_set_power_mode(struct ppu_v1_reg *ppu, enum ppu_v1_mode ppu_mode);
+int ppu_v1_set_power_mode(
+    struct ppu_v1_reg *ppu,
+    enum ppu_v1_mode ppu_mode,
+    struct ppu_v1_timer_ctx *timer_ctx);
 
 /*
  * Request PPU's power mode and don't wait for the transition.
@@ -461,7 +475,6 @@ unsigned int ppu_v1_get_arch_id(struct ppu_v1_reg *ppu);
 
 /*!
  * \endcond
- * @}
  */
 
 #endif  /* PPU_V1_H */

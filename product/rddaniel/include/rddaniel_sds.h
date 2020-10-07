@@ -10,6 +10,8 @@
 
 #include <mod_sds.h>
 
+#include <stdint.h>
+
 /*
  * Structure identifiers.
  */
@@ -21,6 +23,14 @@ enum rddaniel_sds_struct_id {
     RDDANIEL_SDS_FEATURE_AVAILABILITY = 5 | (1 << MOD_SDS_ID_VERSION_MAJOR_POS),
     RDDANIEL_SDS_CPU_BOOTCTR =          6 | (1 << MOD_SDS_ID_VERSION_MAJOR_POS),
     RDDANIEL_SDS_CPU_FLAGS =            7 | (1 << MOD_SDS_ID_VERSION_MAJOR_POS),
+};
+
+enum rddaniel_sds_region_idx {
+    RDDANIEL_SDS_REGION_SECURE,
+#ifdef BUILD_MODE_DEBUG
+    RDDANIEL_SDS_REGION_NONSECURE,
+#endif
+    RDDANIEL_SDS_REGION_COUNT,
 };
 
 /*

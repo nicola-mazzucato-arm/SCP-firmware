@@ -5,11 +5,13 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <synquacer_debug.h>
-#include <synquacer_mmap.h>
-#include <low_level_access.h>
+#include "low_level_access.h"
+#include "synquacer_common.h"
+#include "synquacer_mmap.h"
 
 #include <internal/pmu.h>
+
+#include <stdint.h>
 
 #define CONFIG_SOC_REG_ADDR_PMU_CTL (CONFIG_SOC_REG_ADDR_PMU_TOP + 0)
 #define CONFIG_SOC_REG_ADDR_PMU_INT_EN (CONFIG_SOC_REG_ADDR_PMU_TOP + 0x8U)
@@ -59,7 +61,7 @@
 #define PD_MAX_NO 31U
 
 /** @name bit fields for PMU_CTL */
-//@{
+//\{
 /** ClocK Gating Enabel */
 #define CONFIG_SOC_PMU_CTL_REG_CKGE (1UL << 31)
 /** SET ENable */
@@ -70,7 +72,7 @@
 #define CONFIG_SOC_PMU_CTL_REG_PDSET (1UL << 1)
 /** Power Up SET */
 #define CONFIG_SOC_PMU_CTL_REG_PUSET (1UL << 0)
-//@}
+//\}
 
 static const uint32_t pmu_power_on_cycle_reg_addr[] = {
     CONFIG_SOC_REG_ADDR_PMU_PWR_ON_CYC0, CONFIG_SOC_REG_ADDR_PMU_PWR_ON_CYC1,

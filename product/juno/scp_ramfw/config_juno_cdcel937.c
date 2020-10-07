@@ -5,18 +5,25 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "juno_clock.h"
+#include "juno_id.h"
+#include "juno_mmap.h"
+#include "juno_scc.h"
+
+#include <mod_clock.h>
+#include <mod_juno_cdcel937.h>
+#include <mod_juno_hdlcd.h>
+
 #include <fwk_assert.h>
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_clock.h>
-#include <mod_juno_cdcel937.h>
-#include <mod_juno_hdlcd.h>
-#include <juno_clock.h>
-#include <juno_id.h>
-#include <juno_mmap.h>
+#include <fwk_status.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 static struct juno_clock_lookup i2s_lookup_table[] = {
     {
@@ -196,8 +203,10 @@ static const struct fwk_element *juno_cdcel937_get_element_table(
 }
 
 struct fwk_module_config config_juno_cdcel937 = {
-    .get_element_table = juno_cdcel937_get_element_table,
-    .data = &(struct mod_juno_cdcel937_config) {
-        .i2c_hal_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_I2C, 0),
-    },
+    .data =
+        &(struct mod_juno_cdcel937_config){
+            .i2c_hal_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_I2C, 0),
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(juno_cdcel937_get_element_table),
 };

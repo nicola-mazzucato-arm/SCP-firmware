@@ -11,12 +11,12 @@
 BS_FIRMWARE_CPU := cortex-m7
 BS_FIRMWARE_HAS_MULTITHREADING := yes
 BS_FIRMWARE_HAS_NOTIFICATION := yes
+BS_FIRMWARE_HAS_RESOURCE_PERMISSIONS := yes
 BS_FIRMWARE_MODULE_HEADERS_ONLY :=
 
 BS_FIRMWARE_MODULES := \
     armv7m_mpu \
     pl011 \
-    log \
     cmn600 \
     apcontext \
     power_domain \
@@ -47,12 +47,13 @@ BS_FIRMWARE_MODULES := \
     scmi_system_power \
     ssc \
     system_info \
-    scmi_apcore
+    scmi_apcore \
+    resource_perms
 
 BS_FIRMWARE_SOURCES := \
     rtx_config.c \
     config_armv7m_mpu.c \
-    config_log.c \
+    config_pl011.c \
     config_cmn600.c \
     config_power_domain.c \
     config_clock.c \
@@ -78,6 +79,8 @@ BS_FIRMWARE_SOURCES := \
     config_scmi_apcore.c \
     config_ssc.c \
     config_system_info.c \
-    config_apcontext.c
+    config_apcontext.c \
+    config_scmi_power_domain.c \
+    config_resource_perms.c
 
 include $(BS_DIR)/firmware.mk

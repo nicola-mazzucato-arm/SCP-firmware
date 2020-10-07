@@ -8,9 +8,11 @@
 #ifndef JUNO_PPU_H
 #define JUNO_PPU_H
 
-#include <stdint.h>
-#include <fwk_macros.h>
 #include <mod_juno_ppu.h>
+
+#include <fwk_macros.h>
+
+#include <stdint.h>
 
 struct ppu_reg {
     FWK_RW uint32_t POWER_POLICY;
@@ -51,9 +53,6 @@ struct ppu_ctx {
 struct module_ctx {
     /* Table of element context structures */
     struct ppu_ctx *ppu_ctx_table;
-
-    /* Log module API */
-    const struct mod_log_api *log_api;
 
     /* Timer alarm API */
     const struct mod_timer_alarm_api *alarm_api;

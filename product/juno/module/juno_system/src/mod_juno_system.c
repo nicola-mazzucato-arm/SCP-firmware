@@ -5,17 +5,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
-#include <fmw_cmsis.h>
-#include <fwk_assert.h>
-#include <fwk_event.h>
-#include <fwk_id.h>
-#include <fwk_macros.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <fwk_multi_thread.h>
-#include <fwk_notification.h>
-#include <fwk_status.h>
+#include "juno_id.h"
+#include "juno_scmi.h"
+#include "juno_sds.h"
+#include "juno_system.h"
+
 #include <mod_juno_system.h>
 #include <mod_juno_xrp7724.h>
 #include <mod_power_domain.h>
@@ -23,23 +17,34 @@
 #include <mod_scmi.h>
 #include <mod_sds.h>
 #include <mod_system_power.h>
-#include <config_power_domain.h>
-#include <juno_id.h>
-#include <juno_irq.h>
-#include <juno_ppu_idx.h>
-#include <juno_scmi.h>
-#include <juno_sds.h>
-#include <juno_system.h>
-#include <system_mmap.h>
+
+#include <fwk_assert.h>
+#include <fwk_event.h>
+#include <fwk_id.h>
+#include <fwk_macros.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+#include <fwk_notification.h>
+#include <fwk_status.h>
+#include <fwk_thread.h>
+
+#include <fmw_cmsis.h>
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 static fwk_id_t sds_feature_availability_id =
     FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_SDS, JUNO_SDS_RAM_FEATURES_IDX);
 
 /* SCMI services required to enable the messaging stack */
 static unsigned int scmi_notification_table[] = {
-    JUNO_SCMI_SERVICE_IDX_PSCI,
-    JUNO_SCMI_SERVICE_IDX_OSPM_0,
-    JUNO_SCMI_SERVICE_IDX_OSPM_1,
+    JUNO_SCMI_SERVICE_IDX_PSCI_A2P,
+    JUNO_SCMI_SERVICE_IDX_OSPM_A2P_0,
+    JUNO_SCMI_SERVICE_IDX_OSPM_A2P_1,
+#ifdef BUILD_HAS_SCMI_NOTIFICATIONS
+    JUNO_SCMI_SERVICE_IDX_OSPM_P2A,
+#endif
 };
 
 struct juno_system_ctx {
@@ -253,7 +258,7 @@ static int juno_system_process_notification(const struct fwk_event *event,
 {
     static unsigned int scmi_notification_count = 0;
     static bool sds_notification_received = false;
-    int status = FWK_E_PARAM;
+    int status = FWK_SUCCESS;
 
     struct mod_pd_power_state_pre_transition_notification_params
         *state_pre_params;
@@ -261,8 +266,11 @@ static int juno_system_process_notification(const struct fwk_event *event,
     struct mod_pd_power_state_pre_transition_notification_resp_params
         *pd_resp_params;
 
-    if (!fwk_expect(fwk_id_is_type(event->target_id, FWK_ID_TYPE_MODULE)))
+    if (!fwk_expect(fwk_id_is_type(event->target_id, FWK_ID_TYPE_MODULE))) {
+        status = FWK_E_PARAM;
+
         goto exit;
+    }
 
     if (fwk_id_is_equal(event->id, mod_scmi_notification_id_initialized))
         scmi_notification_count++;
@@ -278,37 +286,26 @@ static int juno_system_process_notification(const struct fwk_event *event,
         (struct mod_pd_power_state_pre_transition_notification_resp_params *)
             resp_event->params;
 
-        if (state_pre_params->target_state != MOD_PD_STATE_ON) {
-            status = FWK_SUCCESS;
-            pd_resp_params->status = status;
-            goto exit;
-        }
-
         if (fwk_id_is_equal(event->source_id, gpu_pd_id)) {
-            /* Power domain is about to be turned ON, turn on VGPU first */
-            status = process_gpu_power_state(event, resp_event, true);
-        }
+            if (state_pre_params->target_state == MOD_PD_STATE_ON)
+                status = process_gpu_power_state(event, resp_event, true);
+        } else
+            status = FWK_E_PARAM;
 
         pd_resp_params->status = status;
-        goto exit;
-
     } else if (fwk_id_is_equal(
                    event->id, mod_pd_notification_id_power_state_transition)) {
         params = (struct mod_pd_power_state_transition_notification_params *)
             event->params;
 
-        if (params->state != MOD_PD_STATE_OFF) {
-            status = FWK_SUCCESS;
-            goto exit;
-        }
-
         if (fwk_id_is_equal(event->source_id, gpu_pd_id)) {
-            /* Power domain has been turned OFF, turn off VGPU */
-            status = process_gpu_power_state(event, resp_event, false);
-        }
-
-        goto exit;
+            if (params->state == MOD_PD_STATE_OFF)
+                status = process_gpu_power_state(event, resp_event, false);
+        } else
+            status = FWK_E_PARAM;
     } else {
+        status = FWK_E_PARAM;
+
         goto exit;
     }
 
@@ -375,7 +372,4 @@ const struct fwk_module module_juno_system = {
 };
 
 /* No elements, no configuration data */
-struct fwk_module_config config_juno_system = {
-    .get_element_table = NULL,
-    .data = NULL,
-};
+struct fwk_module_config config_juno_system = { 0 };

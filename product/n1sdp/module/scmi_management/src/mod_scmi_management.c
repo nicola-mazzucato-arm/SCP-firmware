@@ -8,18 +8,21 @@
  *     SCMI Management Protocol Support.
  */
 
-#include <stdint.h>
+#include "n1sdp_scc_reg.h"
+#include "n1sdp_scp_pik.h"
+
+#include <mod_scmi.h>
+#include <mod_scmi_management.h>
+
 #include <fwk_assert.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_status.h>
-#include <internal/scmi.h>
-#include <mod_scmi.h>
-#include <mod_scmi_management.h>
-#include <n1sdp_scc_reg.h>
-#include <n1sdp_scp_pik.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 struct scmi_management_ctx {
     /* SCMI module API */
@@ -42,10 +45,11 @@ static int scmi_management_chipid_info_get_handler(fwk_id_t service_id,
  */
 static struct scmi_management_ctx scmi_management_ctx;
 
-static int (* const handler_table[])(fwk_id_t, const uint32_t *) = {
-    [SCMI_PROTOCOL_VERSION] = scmi_management_protocol_version_handler,
-    [SCMI_PROTOCOL_ATTRIBUTES] = scmi_management_protocol_attributes_handler,
-    [SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
+static int (*const handler_table[])(fwk_id_t, const uint32_t *) = {
+    [MOD_SCMI_PROTOCOL_VERSION] = scmi_management_protocol_version_handler,
+    [MOD_SCMI_PROTOCOL_ATTRIBUTES] =
+        scmi_management_protocol_attributes_handler,
+    [MOD_SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
         scmi_management_protocol_message_attributes_handler,
     [SCMI_MANAGEMENT_CLOCK_STATUS_GET] =
         scmi_management_clock_status_get_handler,
@@ -54,9 +58,9 @@ static int (* const handler_table[])(fwk_id_t, const uint32_t *) = {
 };
 
 static const unsigned int payload_size_table[] = {
-    [SCMI_PROTOCOL_VERSION] = 0,
-    [SCMI_PROTOCOL_ATTRIBUTES] = 0,
-    [SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] = 0,
+    [MOD_SCMI_PROTOCOL_VERSION] = 0,
+    [MOD_SCMI_PROTOCOL_ATTRIBUTES] = 0,
+    [MOD_SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] = 0,
     [SCMI_MANAGEMENT_CLOCK_STATUS_GET] = 0,
     [SCMI_MANAGEMENT_CHIPID_INFO_GET] = 0,
 };
@@ -234,10 +238,10 @@ static int scmi_management_message_handler(
     static_assert(FWK_ARRAY_SIZE(handler_table) ==
         FWK_ARRAY_SIZE(payload_size_table),
         "[SCMI] Management protocol table sizes not consistent");
-    assert(payload != NULL);
+    fwk_assert(payload != NULL);
 
     if (message_id >= FWK_ARRAY_SIZE(handler_table)) {
-        return_value = SCMI_NOT_SUPPORTED;
+        return_value = SCMI_NOT_FOUND;
         goto error;
     }
 

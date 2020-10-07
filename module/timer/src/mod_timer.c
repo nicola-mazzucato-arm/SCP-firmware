@@ -8,23 +8,23 @@
  *    Implementation of Timer module
  */
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
+#include <mod_timer.h>
+
 #include <fwk_assert.h>
-#include <fwk_element.h>
-#include <fwk_event.h>
+#include <fwk_dlist.h>
 #include <fwk_id.h>
 #include <fwk_interrupt.h>
 #include <fwk_list.h>
+#include <fwk_log.h>
 #include <fwk_macros.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
-#include <fwk_status.h>
-#include <fwk_thread.h>
-#include <mod_log.h>
-#include <mod_timer.h>
 #include <fwk_module_idx.h>
+#include <fwk_status.h>
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
 
 /* Timer device context (element) */
 struct dev_ctx {
@@ -65,9 +65,6 @@ struct alarm_ctx {
 /* Table of timer device context structures */
 static struct dev_ctx *ctx_table;
 
-/* Log API */
-static const struct mod_log_api *log_api;
-
 /*
  * Forward declarations
  */
@@ -85,8 +82,8 @@ static int _time_to_timestamp(struct dev_ctx *ctx,
     int status;
     uint32_t frequency;
 
-    assert(ctx != NULL);
-    assert(timestamp != NULL);
+    fwk_assert(ctx != NULL);
+    fwk_assert(timestamp != NULL);
 
     status = ctx->driver->get_frequency(ctx->driver_dev_id, &frequency);
     if (status != FWK_SUCCESS)
@@ -104,8 +101,8 @@ static int _timestamp_from_now(struct dev_ctx *ctx,
     int status;
     uint64_t counter;
 
-    assert(ctx != NULL);
-    assert(timestamp != NULL);
+    fwk_assert(ctx != NULL);
+    fwk_assert(timestamp != NULL);
 
     status = _time_to_timestamp(ctx, microseconds, timestamp);
     if (status != FWK_SUCCESS)
@@ -147,7 +144,7 @@ static void _configure_timer_with_next_alarm(struct dev_ctx *ctx)
 {
     struct alarm_ctx *alarm_head;
 
-    assert(ctx != NULL);
+    fwk_assert(ctx != NULL);
 
     alarm_head = (struct alarm_ctx *)fwk_list_head(&ctx->alarms_active);
     if (alarm_head != NULL) {
@@ -163,8 +160,8 @@ static void _insert_alarm_ctx_into_active_queue(struct dev_ctx *ctx,
     struct fwk_dlist_node *alarm_node;
     struct alarm_ctx *alarm;
 
-    assert(ctx != NULL);
-    assert(alarm_new != NULL);
+    fwk_assert(ctx != NULL);
+    fwk_assert(alarm_new != NULL);
 
     /*
      * Search though the active queue to find the correct place to insert the
@@ -359,7 +356,7 @@ static int alarm_stop(fwk_id_t alarm_id)
     struct alarm_ctx *alarm;
     unsigned int interrupt;
 
-    assert(fwk_module_is_valid_sub_element_id(alarm_id));
+    fwk_assert(fwk_module_is_valid_sub_element_id(alarm_id));
 
     ctx = &ctx_table[fwk_id_get_element_idx(alarm_id)];
 
@@ -430,7 +427,7 @@ static int alarm_start(fwk_id_t alarm_id,
     struct alarm_ctx *alarm;
     unsigned int interrupt;
 
-    assert(fwk_module_is_valid_sub_element_id(alarm_id));
+    fwk_assert(fwk_module_is_valid_sub_element_id(alarm_id));
 
     status = fwk_interrupt_get_current(&interrupt);
     if (status != FWK_E_STATE) {
@@ -486,7 +483,7 @@ static void timer_isr(uintptr_t ctx_ptr)
     struct dev_ctx *ctx = (struct dev_ctx *)ctx_ptr;
     uint64_t timestamp = 0;
 
-    assert(ctx != NULL);
+    fwk_assert(ctx != NULL);
 
     /* Disable timer interrupts to work with the active queue */
     ctx->driver->disable(ctx->driver_dev_id);
@@ -496,7 +493,7 @@ static void timer_isr(uintptr_t ctx_ptr)
 
     if (alarm == NULL) {
         /* Timer interrupt triggered without any alarm in the active queue */
-        assert(false);
+        fwk_unexpected();
         return;
     }
 
@@ -512,10 +509,11 @@ static void timer_isr(uintptr_t ctx_ptr)
         if (status == FWK_SUCCESS) {
             alarm->timestamp += timestamp;
             _insert_alarm_ctx_into_active_queue(ctx, alarm);
-        } else
-            log_api->log(MOD_LOG_GROUP_ERROR,
-                         "[Timer] Error: Periodic alarm could not be added "
-                         "back into queue.\n");
+        } else {
+            FWK_LOG_ERR(
+                "[Timer] Error: Periodic alarm could not be added "
+                "back into queue.");
+        }
     }
 
     _configure_timer_with_next_alarm(ctx);
@@ -539,7 +537,7 @@ static int timer_device_init(fwk_id_t element_id, unsigned int alarm_count,
 {
     struct dev_ctx *ctx;
 
-    assert(data != NULL);
+    fwk_assert(data != NULL);
 
     ctx = ctx_table + fwk_id_get_element_idx(element_id);
     ctx->config = data;
@@ -561,12 +559,8 @@ static int timer_bind(fwk_id_t id, unsigned int round)
     if (round > 0)
         return FWK_SUCCESS;
 
-    /* Bind to log module */
-    if (fwk_module_is_valid_module_id(id)) {
-        return fwk_module_bind(fwk_module_id_log,
-                               FWK_ID_API(FWK_MODULE_IDX_LOG, 0),
-                               &log_api);
-    }
+    if (fwk_id_is_type(id, FWK_ID_TYPE_MODULE))
+        return FWK_SUCCESS;
 
     ctx = ctx_table + fwk_id_get_element_idx(id);
     ctx->driver_dev_id = ctx->config->id;
@@ -601,7 +595,7 @@ static int timer_process_bind_request(fwk_id_t requester_id,
 
     if (fwk_id_is_equal(api_id, MOD_TIMER_API_ID_TIMER)) {
         if (!fwk_module_is_valid_element_id(id)) {
-            assert(false);
+            fwk_unexpected();
             return FWK_E_PARAM;
         }
 
@@ -612,7 +606,7 @@ static int timer_process_bind_request(fwk_id_t requester_id,
     /* Alarm API requested */
 
     if (!fwk_module_is_valid_sub_element_id(id)) {
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PARAM;
     }
 
@@ -620,7 +614,7 @@ static int timer_process_bind_request(fwk_id_t requester_id,
     alarm_ctx = &ctx->alarm_pool[fwk_id_get_sub_element_idx(id)];
 
     if (alarm_ctx->bound) {
-        assert(false);
+        fwk_unexpected();
         return FWK_E_STATE;
     }
 

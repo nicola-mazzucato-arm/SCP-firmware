@@ -11,14 +11,32 @@
 #ifndef MOD_SCMI_APCORE_H
 #define MOD_SCMI_APCORE_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /*!
  * \ingroup GroupModules Modules
  * \defgroup GroupSCMI_APCORE SCMI Core Configuration Protocol
  * \{
  */
+
+/*!
+ * \brief SCMI APCORE protocol
+ */
+#define MOD_SCMI_PROTOCOL_ID_APCORE UINT32_C(0x90)
+
+/*!
+ * \brief SCMI APCORE protocol version
+ */
+#define MOD_SCMI_PROTOCOL_VERSION_APCORE UINT32_C(0x10000)
+
+/*!
+ * \brief Identifiers of the SCMI Core Configuration Protocol commands
+ */
+enum mod_scmi_apcore_command_id {
+    MOD_SCMI_APCORE_RESET_ADDRESS_SET = 0x3,
+    MOD_SCMI_APCORE_RESET_ADDRESS_GET = 0x4,
+};
 
 /*!
  * \brief Platform reset register widths.
@@ -52,15 +70,15 @@ struct mod_scmi_apcore_reset_register_group {
  */
 struct mod_scmi_apcore_config {
     /*!
-     * \brief Pointer to the table of \ref mod_scmi_apcore_reset_register_group
+     * \brief Pointer to the table of ::mod_scmi_apcore_reset_register_group
      *     structures that define the reset registers within the platform.
      */
     const struct mod_scmi_apcore_reset_register_group
         *reset_register_group_table;
 
     /*!
-     * \brief Number of \ref mod_scmi_apcore_reset_register_group structures in
-     *     \ref reset_register_group_table.
+     * \brief Number of ::mod_scmi_apcore_reset_register_group structures in
+     *     ::mod_scmi_apcore_config::reset_register_group_table.
      */
     size_t reset_register_group_count;
 

@@ -5,10 +5,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <fwk_element.h>
-#include <fwk_module.h>
+#include "system_mmap.h"
+
 #include <mod_sgm775_ddr_phy500.h>
-#include <system_mmap.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
+
+#include <stddef.h>
 
 /* Table of DDR PHY500 element descriptions. */
 static struct fwk_element sgm775_ddr_phy500_element_table[] = {
@@ -43,6 +48,6 @@ static const struct fwk_element *sgm775_ddr_phy500_get_element_table
 
 /* Configuration of the DDR PHY500 module. */
 struct fwk_module_config config_sgm775_ddr_phy500 = {
-    .get_element_table = sgm775_ddr_phy500_get_element_table,
-    .data = NULL,
+    .elements =
+        FWK_MODULE_DYNAMIC_ELEMENTS(sgm775_ddr_phy500_get_element_table),
 };

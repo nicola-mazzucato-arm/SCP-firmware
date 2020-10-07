@@ -5,12 +5,17 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <fwk_element.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
+#include "scp_system_mmap.h"
+
 #include <mod_reg_sensor.h>
 #include <mod_sensor.h>
-#include <scp_system_mmap.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+
+#include <stdint.h>
 
 enum REG_SENSOR_DEVICES {
     REG_SENSOR_DEV_SOC_TEMP,
@@ -44,7 +49,7 @@ static const struct fwk_element *get_reg_sensor_element_table(fwk_id_t id)
 }
 
 struct fwk_module_config config_reg_sensor = {
-    .get_element_table = get_reg_sensor_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_reg_sensor_element_table),
 };
 
 /*
@@ -68,5 +73,5 @@ static const struct fwk_element *get_sensor_element_table(fwk_id_t module_id)
 }
 
 const struct fwk_module_config config_sensor = {
-    .get_element_table = get_sensor_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_sensor_element_table),
 };

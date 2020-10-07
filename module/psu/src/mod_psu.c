@@ -6,12 +6,16 @@
  */
 
 #include <mod_psu.h>
+
 #include <fwk_assert.h>
 #include <fwk_event.h>
-#include <fwk_macros.h>
+#include <fwk_id.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
+#include <fwk_module_idx.h>
+#include <fwk_status.h>
 #include <fwk_thread.h>
+
 #include <string.h>
 
 enum mod_psu_state {
@@ -146,7 +150,7 @@ exit:
     return status;
 }
 
-static int mod_psu_get_voltage(fwk_id_t element_id, uint64_t *voltage)
+static int mod_psu_get_voltage(fwk_id_t element_id, uint32_t *voltage)
 {
     int status;
 
@@ -186,7 +190,7 @@ exit:
     return status;
 }
 
-static int mod_psu_set_voltage(fwk_id_t element_id, uint64_t voltage)
+static int mod_psu_set_voltage(fwk_id_t element_id, uint32_t voltage)
 {
     int status;
 
@@ -271,7 +275,7 @@ static int mod_psu_init(
     unsigned int element_count,
     const void *data)
 {
-    fwk_expect(data == NULL);
+    fwk_check(data == NULL);
 
     mod_psu_ctx.elements =
         fwk_mm_calloc(element_count, sizeof(mod_psu_ctx.elements[0]));
@@ -286,7 +290,7 @@ static int mod_psu_element_init(
 {
     struct mod_psu_element_ctx *ctx;
 
-    fwk_expect(sub_element_count == 0);
+    fwk_check(sub_element_count == 0);
 
     ctx = mod_psu_get_element_ctx(element_id);
 

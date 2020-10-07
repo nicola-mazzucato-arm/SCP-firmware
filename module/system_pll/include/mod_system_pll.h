@@ -8,9 +8,11 @@
 #ifndef MOD_SYSTEM_PLL_H
 #define MOD_SYSTEM_PLL_H
 
-#include <stdint.h>
 #include <fwk_element.h>
 #include <fwk_macros.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /*!
  * \ingroup GroupModules Modules
@@ -18,7 +20,7 @@
  *
  * \details A driver for system PLL devices.
  *
- * @{
+ * \{
  */
 
 /*! The slowest rate at which the PLL hardware can operate. */
@@ -83,11 +85,7 @@ struct mod_system_pll_dev_config {
 };
 
 /*!
- * @}
- */
-
-/*!
- * @}
+ * \}
  */
 
 #endif /* MOD_SYSTEM_PLL_H */

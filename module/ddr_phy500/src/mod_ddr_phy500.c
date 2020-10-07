@@ -8,30 +8,30 @@
  *     DDR-PHY500 driver
  */
 
-#include <fwk_assert.h>
-#include <fwk_id.h>
-#include <fwk_mm.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <fwk_status.h>
 #include <mod_ddr_phy500.h>
 
 #ifdef BUILD_HAS_MOD_DMC500
-    #include <mod_dmc500.h>
+#    include <mod_dmc500.h>
 #endif
 
 #ifdef BUILD_HAS_MOD_DMC620
-    #include <mod_dmc620.h>
+#    include <mod_dmc620.h>
 #endif
 
-static struct mod_log_api *log_api;
+#include <fwk_assert.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+#include <fwk_status.h>
+
+#include <stddef.h>
 
 /*
  * Functions fulfilling this module's interface
  */
 static int ddr_phy500_config(fwk_id_t element_id)
 {
-    int status;
     struct mod_ddr_phy500_reg *ddr;
     const struct mod_ddr_phy500_module_config *module_config;
     const struct mod_ddr_phy500_element_config *element_config;
@@ -43,10 +43,7 @@ static int ddr_phy500_config(fwk_id_t element_id)
 
     ddr = (struct mod_ddr_phy500_reg *)element_config->ddr;
 
-    status = log_api->log(MOD_LOG_GROUP_INFO,
-        "[DDR] Initializing PHY at 0x%x\n", (uintptr_t) ddr);
-    if (status != FWK_SUCCESS)
-        return status;
+    FWK_LOG_INFO("[DDR] Initializing PHY at 0x%x", (uintptr_t)ddr);
 
     if (module_config->initialize_init_complete)
         ddr->INIT_COMPLETE = module_config->ddr_reg_val->INIT_COMPLETE;
@@ -81,7 +78,7 @@ static struct mod_dmc_ddr_phy_api ddr_phy500_api = {
 static int ddr_phy500_init(fwk_id_t module_id, unsigned int element_count,
                            const void *config)
 {
-    assert(config != NULL);
+    fwk_assert(config != NULL);
 
     return FWK_SUCCESS;
 }
@@ -89,15 +86,13 @@ static int ddr_phy500_init(fwk_id_t module_id, unsigned int element_count,
 static int ddr_phy500_element_init(fwk_id_t element_id, unsigned int unused,
                                    const void *data)
 {
-    assert(data != NULL);
+    fwk_assert(data != NULL);
 
     return FWK_SUCCESS;
 }
 
 static int ddr_phy500_bind(fwk_id_t id, unsigned int round)
 {
-    int status;
-
     /* Skip the second round (rounds are zero-indexed) */
     if (round == 1)
         return FWK_SUCCESS;
@@ -105,12 +100,6 @@ static int ddr_phy500_bind(fwk_id_t id, unsigned int round)
     /* Nothing to be done for element-level binding */
     if (fwk_module_is_valid_element_id(id))
         return FWK_SUCCESS;
-
-    /* Bind to the log module and get a pointer to its API */
-    status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG), MOD_LOG_API_ID,
-        &log_api);
-    if (status != FWK_SUCCESS)
-        return FWK_E_HANDLER;
 
     return FWK_SUCCESS;
 }

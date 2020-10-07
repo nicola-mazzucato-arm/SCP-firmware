@@ -5,11 +5,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <mod_n1sdp_remote_pd.h>
+#include <mod_power_domain.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
-#include <mod_n1sdp_remote_pd.h>
-#include <mod_power_domain.h>
 
 static const struct fwk_element remote_pd_element_table[] = {
     [0] = {
@@ -75,5 +76,5 @@ static const struct fwk_element *remote_pd_get_element_table(fwk_id_t id)
 }
 
 const struct fwk_module_config config_n1sdp_remote_pd = {
-    .get_element_table = remote_pd_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(remote_pd_get_element_table),
 };

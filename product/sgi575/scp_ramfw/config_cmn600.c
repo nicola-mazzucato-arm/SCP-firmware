@@ -5,12 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config_clock.h"
+#include "scp_sgi575_mmap.h"
+
+#include <mod_cmn600.h>
+
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_cmn600.h>
-#include <scp_sgi575_mmap.h>
-#include <config_clock.h>
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /*
  * CMN600 nodes
@@ -49,7 +56,7 @@ static const struct mod_cmn600_memory_region_map mmap[] = {
     },
     {
         /*
-         * Peripherals
+         * NOR Flash
          * Map: 0x00_0800_0000 - 0x00_0FFF_FFFF (128 MB)
          */
         .base = UINT64_C(0x0008000000),
@@ -90,8 +97,7 @@ static const struct mod_cmn600_memory_region_map mmap[] = {
 };
 
 const struct fwk_module_config config_cmn600 = {
-    .get_element_table = NULL,
-    .data = &((struct mod_cmn600_config) {
+    .data = &((struct mod_cmn600_config){
         .base = SCP_CMN600_BASE,
         .mesh_size_x = 4,
         .mesh_size_y = 2,
@@ -101,8 +107,8 @@ const struct fwk_module_config config_cmn600 = {
         .mmap_table = mmap,
         .mmap_count = FWK_ARRAY_SIZE(mmap),
         .chip_addr_space = UINT64_C(4) * FWK_TIB,
-        .clock_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_CLOCK,
-            CLOCK_IDX_INTERCONNECT),
+        .clock_id =
+            FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_CLOCK, CLOCK_IDX_INTERCONNECT),
         .hnf_cal_mode = false,
     }),
 };

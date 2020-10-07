@@ -8,13 +8,14 @@
 #ifndef SENSOR_H
 #define SENSOR_H
 
-#include <stdint.h>
-#include <fwk_id.h>
 #include <mod_sensor.h>
+
+#include <fwk_id.h>
+
+#include <stdint.h>
 
 /*!
  * \cond
- * @{
  */
 
 /*
@@ -45,7 +46,6 @@ static const fwk_id_t mod_sensor_event_id_read_complete =
 
 /*!
  * \endcond
- * @}
  */
 
 #endif /* SENSOR_H */

@@ -5,15 +5,21 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <dimm_spd.h>
+
+#include <mod_n1sdp_dmc620.h>
+#include <mod_n1sdp_i2c.h>
+
+#include <fwk_assert.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
+#include <fwk_macros.h>
+#include <fwk_module_idx.h>
+#include <fwk_status.h>
+
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <fwk_assert.h>
-#include <fwk_macros.h>
-#include <fwk_id.h>
-#include <fwk_module_idx.h>
-#include <mod_log.h>
-#include <mod_n1sdp_i2c.h>
-#include <dimm_spd.h>
 
 static bool multi_rank;
 static float t_refi = .0000078;
@@ -92,41 +98,45 @@ static int chk_ddr4_dimms(unsigned int speed,
             return FWK_E_DATA;
         break;
     default:
-        fwk_assert(false);
+        fwk_unexpected();
         break;
     }
 
     return FWK_SUCCESS;
 }
 
-static void dimm_device_data(uint8_t *spd_data,
-    struct mod_log_api *log_api, uint8_t dimm_id)
+static void dimm_device_data(uint8_t *spd_data, uint8_t dimm_id)
 {
-    unsigned int i;
+    unsigned int i, j;
+    char part_num[20];
 
     if (spd_data[2] == 0x0C) {
-        log_api->log(MOD_LOG_GROUP_INFO,
-            "    DIMM %d information:\n", dimm_id);
-        log_api->log(MOD_LOG_GROUP_INFO,
-            "    Manufacturer ID = 0x%x 0x%x\n",
-            spd_data[320], spd_data[321]);
-        log_api->log(MOD_LOG_GROUP_INFO, "    Module part number = ");
+        FWK_LOG_INFO("    DIMM %d information:", dimm_id);
+        FWK_LOG_INFO(
+            "    Manufacturer ID = 0x%x 0x%x", spd_data[320], spd_data[321]);
+
+        j = 0;
         for (i = 329; i <= 348; i++)
-            log_api->log(MOD_LOG_GROUP_INFO, "%c", spd_data[i]);
-        log_api->log(MOD_LOG_GROUP_INFO, "\n");
+            part_num[j++] = spd_data[i];
 
-        log_api->log(MOD_LOG_GROUP_INFO,
-            "    Module serial number = 0x%x 0x%x 0x%x 0x%x\n",
-            spd_data[325], spd_data[326], spd_data[327], spd_data[328]);
+        FWK_LOG_INFO("    Module part number = %s", part_num);
 
-        log_api->log(MOD_LOG_GROUP_INFO,
-            "    Module manufacturing week %d%d year %d%d\n",
-            0xF & (spd_data[324] >> 4), 0xF & spd_data[324],
-            0xF & (spd_data[323] >> 4), 0xF & spd_data[323]);
+        FWK_LOG_INFO(
+            "    Module serial number = 0x%x 0x%x 0x%x 0x%x",
+            spd_data[325],
+            spd_data[326],
+            spd_data[327],
+            spd_data[328]);
+
+        FWK_LOG_INFO(
+            "    Module manufacturing week %d%d year %d%d",
+            0xF & (spd_data[324] >> 4),
+            0xF & spd_data[324],
+            0xF & (spd_data[323] >> 4),
+            0xF & spd_data[323]);
     } else {
-        log_api->log(MOD_LOG_GROUP_INFO,
-            "[DDR] ERROR! DDR4 SPD EEPROM Not Detected\n");
-        fwk_assert(false);
+        FWK_LOG_INFO("[DDR] ERROR! DDR4 SPD EEPROM Not Detected");
+        fwk_unexpected();
     }
 }
 
@@ -442,19 +452,17 @@ int dimm_spd_init_check(struct mod_n1sdp_i2c_master_api_polled *i2c_api,
     if (status != FWK_SUCCESS)
         return status;
 
-    dmc_clk_freq = ddr->speed * 1000000;
-    dmc_clk_period = 1/((float)(ddr->speed * 1000000));
-    dmc_clk_period_ps = (int32_t)((1/((float)(ddr->speed * 1000000))) *
-                                  1000000000000);
+    dmc_clk_freq = ddr->speed * UINT32_C(1000000);
+    dmc_clk_period = 1.0f / dmc_clk_freq;
+    dmc_clk_period_ps = dmc_clk_period * 1000000000000.0f;
+
     return FWK_SUCCESS;
 }
 
-void dimm_spd_mem_info(struct mod_log_api *log_api)
+void dimm_spd_mem_info(void)
 {
-    fwk_assert(log_api != NULL);
-
-    dimm_device_data((uint8_t *)&ddr4_dimm0, log_api, 0);
-    dimm_device_data((uint8_t *)&ddr4_dimm1, log_api, 1);
+    dimm_device_data((uint8_t *)&ddr4_dimm0, 0);
+    dimm_device_data((uint8_t *)&ddr4_dimm1, 1);
 }
 
 int dimm_spd_address_control(uint32_t *temp_reg, struct dimm_info *ddr)

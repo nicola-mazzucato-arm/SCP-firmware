@@ -5,43 +5,55 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config_clock.h"
+
+#include <mod_dvfs.h>
+#include <mod_sid.h>
+#include <mod_scmi_perf.h>
+
 #include <fwk_assert.h>
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_dvfs.h>
-#include <mod_sid.h>
-#include <config_clock.h>
+#include <fwk_status.h>
 
-static struct mod_dvfs_opp opps[] = {
-        {
-            .frequency = 1313 * FWK_MHZ,
-            .voltage = 800,
-        },
-        {
-            .frequency = 1531 * FWK_MHZ,
-            .voltage = 850,
-        },
-        {
-            .frequency = 1750 * FWK_MHZ,
-            .voltage = 900,
-        },
-        {
-            .frequency = 2100 * FWK_MHZ,
-            .voltage = 950,
-        },
-        {
-            .frequency = 2600 * FWK_MHZ,
-            .voltage = 1000,
-        },
-        { 0 }
-};
+static struct mod_dvfs_opp opps[] = { {
+                                          .level = 1313 * 1000000UL,
+                                          .frequency = 1313 * FWK_KHZ,
+                                          .voltage = 800,
+                                      },
+                                      {
+                                          .level = 1531 * 1000000UL,
+                                          .frequency = 1531 * FWK_KHZ,
+                                          .voltage = 850,
+                                      },
+                                      {
+                                          .level = 1750 * 1000000UL,
+                                          .frequency = 1750 * FWK_KHZ,
+                                          .voltage = 900,
+                                      },
+                                      {
+                                          .level = 2100 * 1000000UL,
+                                          .frequency = 2100 * FWK_KHZ,
+                                          .voltage = 950,
+                                      },
+                                      {
+                                          .level = 2600 * 1000000UL,
+                                          .frequency = 2600 * FWK_KHZ,
+                                          .voltage = 1000,
+                                      },
+                                      { 0 } };
 
 static const struct mod_dvfs_domain_config cpu_group0 = {
     .psu_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PSU, 0),
     .clock_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_CLOCK, CLOCK_IDX_CPU_GROUP0),
     .alarm_id = FWK_ID_SUB_ELEMENT_INIT(FWK_MODULE_IDX_TIMER, 0, 0),
+    .notification_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_SCMI_PERF),
+    .updates_api_id = FWK_ID_API_INIT(
+        FWK_MODULE_IDX_SCMI_PERF,
+        MOD_SCMI_PERF_DVFS_UPDATE_API),
     .retry_ms = 1,
     .latency = 1200,
     .sustained_idx = 2,
@@ -52,6 +64,10 @@ static const struct mod_dvfs_domain_config cpu_group1 = {
     .psu_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_PSU, 1),
     .clock_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_CLOCK, CLOCK_IDX_CPU_GROUP1),
     .alarm_id = FWK_ID_SUB_ELEMENT_INIT(FWK_MODULE_IDX_TIMER, 0, 1),
+    .notification_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_SCMI_PERF),
+    .updates_api_id = FWK_ID_API_INIT(
+        FWK_MODULE_IDX_SCMI_PERF,
+        MOD_SCMI_PERF_DVFS_UPDATE_API),
     .retry_ms = 1,
     .latency = 1200,
     .sustained_idx = 2,
@@ -103,15 +119,14 @@ static const struct fwk_element *dvfs_get_element_table(fwk_id_t module_id)
      * draw. The capacitance constants are given in mW/MHz/V^2.
      */
     for (opp = opps; opp->frequency != 0; opp++) {
-        opp->power = cluster_core_coefficient *
-                     cluster_core_count *
-                     (opp->frequency / FWK_MHZ) *
-                     (opp->voltage * opp->voltage) / 1000000;
+        opp->power = cluster_core_coefficient * cluster_core_count *
+            (opp->frequency / FWK_KHZ) * (opp->voltage * opp->voltage) /
+            1000000;
     }
 
     return element_table;
 }
 
 const struct fwk_module_config config_dvfs = {
-    .get_element_table = dvfs_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(dvfs_get_element_table),
 };

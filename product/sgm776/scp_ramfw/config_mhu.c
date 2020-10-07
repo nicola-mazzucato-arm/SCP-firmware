@@ -5,13 +5,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "sgm776_mhu.h"
+#include "sgm776_mmap.h"
+
+#include <mod_mhu2.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
-#include <mod_mhu2.h>
-#include <sgm776_irq.h>
-#include <sgm776_mhu.h>
-#include <sgm776_mmap.h>
+
+#include <fmw_cmsis.h>
 
 static const struct fwk_element mhu_element_table[] = {
     [SGM776_MHU_DEVICE_IDX_S] = {
@@ -53,5 +56,5 @@ static const struct fwk_element *mhu_get_element_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_mhu2 = {
-    .get_element_table = mhu_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(mhu_get_element_table),
 };

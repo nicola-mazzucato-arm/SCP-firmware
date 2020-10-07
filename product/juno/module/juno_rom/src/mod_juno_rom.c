@@ -5,28 +5,31 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <juno_debug_rom.h>
-#include <juno_nic400.h>
-#include <juno_ppu_idx.h>
-#include <juno_scc.h>
-#include <juno_utils.h>
-#include <juno_wdog_rom.h>
-#include <scp_config.h>
+#include "juno_debug_rom.h"
+#include "juno_nic400.h"
+#include "juno_ppu_idx.h"
+#include "juno_scc.h"
+#include "juno_utils.h"
+#include "juno_wdog_rom.h"
+#include "scp_config.h"
 
 #include <mod_bootloader.h>
 #include <mod_juno_ppu.h>
 #include <mod_juno_rom.h>
-#include <mod_log.h>
 #include <mod_power_domain.h>
 
 #include <fwk_assert.h>
+#include <fwk_event.h>
 #include <fwk_id.h>
+#include <fwk_log.h>
+#include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_notification.h>
 #include <fwk_status.h>
 #include <fwk_thread.h>
 
+#include <stdbool.h>
 #include <string.h>
 
 /* Values for cluster configuration */
@@ -48,7 +51,6 @@
 static struct {
     const struct mod_juno_rom_config *config;
     const struct mod_juno_ppu_rom_api *ppu_api;
-    struct mod_log_api *log_api;
     struct mod_bootloader_api *bootloader_api;
     unsigned int notification_count;
     unsigned int boot_map_little;
@@ -180,9 +182,7 @@ static int deferred_setup(void)
         FWK_ARRAY_SIZE(core_ppu_table_little));
 
     if (status != FWK_SUCCESS) {
-        ctx.log_api->log(
-            MOD_LOG_GROUP_ERROR,
-            "[ROM] ERROR: Failed to turn on LITTLE cluster.\n");
+        FWK_LOG_ERR("[ROM] ERROR: Failed to turn on LITTLE cluster.");
         return FWK_E_DEVICE;
     }
 
@@ -193,9 +193,7 @@ static int deferred_setup(void)
         FWK_ARRAY_SIZE(core_ppu_table_big));
 
     if (status != FWK_SUCCESS) {
-        ctx.log_api->log(
-            MOD_LOG_GROUP_ERROR,
-            "[ROM] ERROR: Failed to turn on big cluster.\n");
+        FWK_LOG_ERR("[ROM] ERROR: Failed to turn on big cluster.");
         return FWK_E_DEVICE;
     }
 
@@ -219,10 +217,7 @@ static int deferred_setup(void)
 
     status = ctx.bootloader_api->load_image();
 
-    ctx.log_api->log(
-        MOD_LOG_GROUP_ERROR,
-        "[ROM] ERROR: Failed to load RAM firmware image: %d\n",
-        status);
+    FWK_LOG_ERR("[ROM] ERROR: Failed to load RAM firmware image: %d", status);
 
     return FWK_E_DATA;
 }
@@ -258,10 +253,6 @@ static int juno_rom_bind(fwk_id_t id, unsigned int round)
 
     status = fwk_module_bind(fwk_module_id_juno_ppu,
         mod_juno_ppu_api_id_rom, &ctx.ppu_api);
-    if (!fwk_expect(status == FWK_SUCCESS))
-        return FWK_E_PANIC;
-
-    status = fwk_module_bind(fwk_module_id_log, MOD_LOG_API_ID, &ctx.log_api);
     if (!fwk_expect(status == FWK_SUCCESS))
         return FWK_E_PANIC;
 
@@ -347,10 +338,9 @@ static int juno_rom_process_event(
     /* Set alternative AP ROM address (if applicable) */
     if (SCC->APP_ALT_BOOT != 0) {
         if ((SCC->APP_ALT_BOOT & 0x3) != 0) {
-            ctx.log_api->log(
-                MOD_LOG_GROUP_ERROR,
+            FWK_LOG_ERR(
                 "[ROM] ERROR: Alternative AP ROM address does not have 4 byte "
-                "alignment\n");
+                "alignment");
             return FWK_E_ALIGN;
         }
 

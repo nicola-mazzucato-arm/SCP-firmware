@@ -5,18 +5,17 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <fwk_assert.h>
-#include <fwk_element.h>
-#include <fwk_mm.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <fwk_status.h>
 #include <mod_clock.h>
-#include <mod_css_clock.h>
 #include <mod_power_domain.h>
 #include <mod_synquacer_pik_clock.h>
+
+#include <fwk_id.h>
+#include <fwk_mm.h>
+#include <fwk_module.h>
+#include <fwk_status.h>
+
+#include <stdint.h>
+#include <stdlib.h>
 
 /*
  * Masks for single-source clock divider control.
@@ -534,7 +533,7 @@ static const struct mod_clock_drv_api api_clock = {
  * Direct driver API functions
  */
 
-#if BUILD_HAS_MOD_CSS_CLOCK
+#ifdef BUILD_HAS_MOD_CSS_CLOCK
 static int pik_clock_direct_set_div(
     fwk_id_t clock_id,
     uint32_t divider_type,
@@ -544,7 +543,7 @@ static int pik_clock_direct_set_div(
     struct pik_clock_dev_ctx *ctx;
 
     ctx = module_ctx.dev_ctx_table + fwk_id_get_element_idx(clock_id);
-    assert(ctx->config->is_group_member);
+    fwk_assert(ctx->config->is_group_member);
 
     if (ctx->current_state == MOD_CLOCK_STATE_STOPPED)
         return FWK_E_PWRSTATE;
@@ -573,7 +572,7 @@ static int pik_clock_direct_set_source(fwk_id_t clock_id, uint8_t source)
     struct pik_clock_dev_ctx *ctx;
 
     ctx = module_ctx.dev_ctx_table + fwk_id_get_element_idx(clock_id);
-    assert(ctx->config->is_group_member);
+    fwk_assert(ctx->config->is_group_member);
 
     if (ctx->current_state == MOD_CLOCK_STATE_STOPPED)
         return FWK_E_PWRSTATE;
@@ -589,7 +588,7 @@ static int pik_clock_direct_set_mod(
     struct pik_clock_dev_ctx *ctx;
 
     ctx = module_ctx.dev_ctx_table + fwk_id_get_element_idx(clock_id);
-    assert(ctx->config->is_group_member);
+    fwk_assert(ctx->config->is_group_member);
 
     if (ctx->current_state == MOD_CLOCK_STATE_STOPPED)
         return FWK_E_PWRSTATE;
@@ -719,7 +718,7 @@ static int pik_clock_process_bind_request(
     ctx = module_ctx.dev_ctx_table + fwk_id_get_element_idx(target_id);
 
     if (ctx->config->is_group_member) {
-#if BUILD_HAS_MOD_CSS_CLOCK
+#ifdef BUILD_HAS_MOD_CSS_CLOCK
         /* Only the CSS Clock module can bind to group members. */
         if (fwk_id_get_module_idx(source_id) == FWK_MODULE_IDX_CSS_CLOCK) {
             *api = &api_direct;

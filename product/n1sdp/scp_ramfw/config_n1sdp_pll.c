@@ -5,14 +5,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config_clock.h"
+#include "n1sdp_scp_mmap.h"
+#include "n1sdp_system_clock.h"
+
+#include <mod_n1sdp_pll.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
-#include <mod_n1sdp_pll.h>
-#include <n1sdp_scp_mmap.h>
-#include <config_clock.h>
-#include <n1sdp_system_clock.h>
 
 static struct n1sdp_pll_custom_freq_param_entry freq_table[] = {
     {
@@ -88,9 +90,11 @@ static const struct fwk_element *n1sdp_pll_get_element_table
 }
 
 const struct fwk_module_config config_n1sdp_pll = {
-    .get_element_table = n1sdp_pll_get_element_table,
-    .data = &((struct n1sdp_pll_module_config) {
-        .custom_freq_table = freq_table,
-        .custom_freq_table_size = FWK_ARRAY_SIZE(freq_table),
-    }),
+    .data =
+        &(struct n1sdp_pll_module_config){
+            .custom_freq_table = freq_table,
+            .custom_freq_table_size = FWK_ARRAY_SIZE(freq_table),
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(n1sdp_pll_get_element_table),
 };

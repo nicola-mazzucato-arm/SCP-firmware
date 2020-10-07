@@ -5,26 +5,29 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
+#include "juno_ppu.h"
+#include "juno_ppu_idx.h"
+#include "juno_utils.h"
+#include "scp_config.h"
+#include "system_mmap.h"
+
+#include <mod_juno_ppu.h>
+#include <mod_power_domain.h>
+#include <mod_system_power.h>
+#include <mod_timer.h>
+
 #include <fwk_assert.h>
 #include <fwk_id.h>
 #include <fwk_interrupt.h>
+#include <fwk_log.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_status.h>
-#include <mod_juno_ppu.h>
-#include <mod_log.h>
-#include <mod_power_domain.h>
-#include <mod_system_power.h>
-#include <mod_timer.h>
-#include <juno_irq.h>
-#include <juno_power_domain.h>
-#include <juno_ppu.h>
-#include <juno_ppu_idx.h>
-#include <juno_utils.h>
-#include <scp_config.h>
-#include <system_mmap.h>
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #define PPU_SET_STATE_AND_WAIT_TIMEOUT_US   (100 * 1000)
 
@@ -414,7 +417,7 @@ static int css_set_state(fwk_id_t ppu_id, unsigned int state)
         /* Fall through */
 
     case MOD_SYSTEM_POWER_POWER_STATE_SLEEP0:
-        juno_ppu_ctx.log_api->flush();
+        FWK_LOG_FLUSH();
 
         enable_scp_remap();
 
@@ -604,7 +607,7 @@ static int core_set_state(fwk_id_t ppu_id, unsigned int state)
         break;
 
     default:
-        fwk_assert(false);
+        fwk_unexpected();
         status = FWK_E_PANIC;
 
         break;
@@ -729,8 +732,8 @@ static void core_wakeup_handler(uintptr_t param)
     status = disable_wakeup_irq(dev_config);
     fwk_assert(status == FWK_SUCCESS);
 
-    status = ppu_ctx->pd_api->set_composite_state_async(ppu_ctx->bound_id,
-        false, CPU_WAKEUP_COMPOSITE_STATE);
+    status = ppu_ctx->pd_api->set_state_async(
+        ppu_ctx->bound_id, false, CPU_WAKEUP_COMPOSITE_STATE);
     fwk_assert(status == FWK_SUCCESS);
 }
 
@@ -777,7 +780,7 @@ static int juno_ppu_module_init(fwk_id_t module_id,
 
     juno_ppu_ctx.dbgsys_state = MOD_PD_STATE_OFF;
 
-    #if BUILD_HAS_MOD_TIMER
+#ifdef BUILD_HAS_MOD_TIMER
     fwk_assert(data != NULL);
     #endif
 
@@ -830,12 +833,7 @@ static int juno_ppu_bind(fwk_id_t id, unsigned int round)
         return FWK_SUCCESS;
 
     if (fwk_id_is_type(id, FWK_ID_TYPE_MODULE)) {
-        status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-                                 MOD_LOG_API_ID, &juno_ppu_ctx.log_api);
-        if (status != FWK_SUCCESS)
-            return FWK_E_HANDLER;
-
-        #if BUILD_HAS_MOD_TIMER
+#ifdef BUILD_HAS_MOD_TIMER
         config = fwk_module_get_data(fwk_module_id_juno_ppu);
 
         status = fwk_module_bind(
@@ -852,7 +850,7 @@ static int juno_ppu_bind(fwk_id_t id, unsigned int round)
     ppu_ctx = juno_ppu_ctx.ppu_ctx_table + fwk_id_get_element_idx(id);
     dev_config = ppu_ctx->config;
 
-    #if BUILD_HAS_MOD_TIMER
+#ifdef BUILD_HAS_MOD_TIMER
     if (!fwk_id_is_equal(dev_config->timer_id, FWK_ID_NONE)) {
         /* Bind to the timer */
         status = fwk_module_bind(dev_config->timer_id,
@@ -865,7 +863,7 @@ static int juno_ppu_bind(fwk_id_t id, unsigned int round)
     if (!fwk_id_is_equal(ppu_ctx->bound_id, FWK_ID_NONE)) {
         /* Bind back to the entity that bound to us (if any) */
         switch (fwk_id_get_module_idx(ppu_ctx->bound_id)) {
-        #if BUILD_HAS_MOD_POWER_DOMAIN
+#ifdef BUILD_HAS_MOD_POWER_DOMAIN
         case FWK_MODULE_IDX_POWER_DOMAIN:
             /* Bind back to the PD module */
             status = fwk_module_bind(ppu_ctx->bound_id,
@@ -876,7 +874,7 @@ static int juno_ppu_bind(fwk_id_t id, unsigned int round)
             break;
         #endif
 
-        #if BUILD_HAS_MOD_SYSTEM_POWER
+#ifdef BUILD_HAS_MOD_SYSTEM_POWER
         case FWK_MODULE_IDX_SYSTEM_POWER:
             /* Bind back to the System Power module */
             status = fwk_module_bind(ppu_ctx->bound_id,
@@ -888,7 +886,7 @@ static int juno_ppu_bind(fwk_id_t id, unsigned int round)
         #endif
 
         default:
-            fwk_assert(false);
+            fwk_unexpected();
             return FWK_E_SUPPORT;
 
             break;

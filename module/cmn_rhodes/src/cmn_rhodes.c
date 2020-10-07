@@ -5,9 +5,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <cmn_rhodes.h>
+
 #include <fwk_assert.h>
 #include <fwk_math.h>
-#include <cmn_rhodes.h>
 
 /*
  * Encoding bits size of the X and Y position in the Node info value.
@@ -115,6 +116,9 @@ uint64_t sam_encode_region_size(uint64_t size)
     /* Size must be a multiple of SAM_GRANULARITY */
     fwk_assert((size % SAM_GRANULARITY) == 0);
 
+    /* Size also must be a power of two */
+    fwk_assert((size & (size - 1)) == 0);
+
     blocks = size / SAM_GRANULARITY;
     result = fwk_math_log2(blocks);
 
@@ -147,6 +151,8 @@ static const char * const type_to_name[] = {
     [NODE_TYPE_HN_F]    = "HN-F",
     [NODE_TYPE_XP]      = "XP",
     [NODE_TYPE_SBSX]    = "SBSX",
+    [NODE_TYPE_MPAM_S]  = "MPAM-S",
+    [NODE_TYPE_MPAM_NS] = "MPAM-NS",
     [NODE_TYPE_RN_I]    = "RN-I",
     [NODE_TYPE_RN_D]    = "RN-D",
     [NODE_TYPE_RN_SAM]  = "RN-SAM",

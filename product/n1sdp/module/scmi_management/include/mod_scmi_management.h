@@ -11,17 +11,17 @@
 #ifndef MOD_SCMI_MANAGEMENT_H
 #define MOD_SCMI_MANAGEMENT_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupN1SDPModule N1SDP Product Modules
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupN1SDPSCMI_MANAGEMENT SCMI Management Protocol
- * @{
+ * \{
  */
 
 /*!
@@ -67,11 +67,11 @@ struct scmi_management_chipid_info_get_p2a {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_SCMI_MANAGEMENT_H */

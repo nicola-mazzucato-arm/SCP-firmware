@@ -5,16 +5,22 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config_power_domain.h"
+#include "juno_clock.h"
+#include "juno_id.h"
+#include "juno_scc.h"
+#include "scp_config.h"
+
+#include <mod_juno_soc_clock_ram.h>
+
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_juno_soc_clock_ram.h>
-#include <juno_clock.h>
-#include <juno_id.h>
-#include <juno_scc.h>
-#include <scp_config.h>
-#include <config_power_domain.h>
+#include <fwk_status.h>
+
+#include <stddef.h>
 
 /*
  * Big cluster rate tables respectively for Juno r0, r1 and r2.
@@ -469,12 +475,17 @@ static const struct fwk_element *juno_soc_clock_ram_get_element_table
 }
 
 struct fwk_module_config config_juno_soc_clock_ram = {
-    .get_element_table = juno_soc_clock_ram_get_element_table,
-    .data = &((struct mod_juno_soc_clock_ram_config) {
+    .data =
+        &(struct mod_juno_soc_clock_ram_config){
             .timer_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_TIMER, 0),
-            .debug_pd_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_POWER_DOMAIN,
+            .debug_pd_id = FWK_ID_ELEMENT_INIT(
+                FWK_MODULE_IDX_POWER_DOMAIN,
                 POWER_DOMAIN_IDX_DBGSYS),
-            .systop_pd_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_POWER_DOMAIN,
+            .systop_pd_id = FWK_ID_ELEMENT_INIT(
+                FWK_MODULE_IDX_POWER_DOMAIN,
                 POWER_DOMAIN_IDX_SYSTOP),
-        }),
+        },
+
+    .elements =
+        FWK_MODULE_DYNAMIC_ELEMENTS(juno_soc_clock_ram_get_element_table),
 };

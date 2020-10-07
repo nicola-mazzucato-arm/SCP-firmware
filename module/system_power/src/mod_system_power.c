@@ -8,17 +8,20 @@
  *     System Power Support.
  */
 
-#include <stdint.h>
+#include <mod_power_domain.h>
+#include <mod_system_power.h>
+
 #include <fwk_assert.h>
 #include <fwk_id.h>
 #include <fwk_interrupt.h>
-#include <fwk_macros.h>
+#include <fwk_log.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_log.h>
-#include <mod_system_power.h>
-#include <mod_power_domain.h>
+#include <fwk_status.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /* SoC wakeup composite state */
 #define MOD_SYSTEM_POWER_SOC_WAKEUP_STATE \
@@ -39,9 +42,6 @@ struct system_power_dev_ctx {
 
 /* Module context */
 struct system_power_ctx {
-    /* Log API pointer */
-    const struct mod_log_api *log_api;
-
     /* System power element context table */
     struct system_power_dev_ctx *dev_ctx_table;
 
@@ -321,10 +321,9 @@ static void soc_wakeup_handler(void)
     if (status != FWK_SUCCESS)
         fwk_trap();
 
-    status =
-        system_power_ctx.mod_pd_restricted_api->set_composite_state_async(
-            system_power_ctx.last_core_pd_id, false, state);
-    fwk_expect(status == FWK_SUCCESS);
+    status = system_power_ctx.mod_pd_restricted_api->set_state_async(
+        system_power_ctx.last_core_pd_id, false, state);
+    fwk_check(status == FWK_SUCCESS);
 }
 
 static const struct mod_pd_driver_api system_power_power_domain_driver_api = {
@@ -373,7 +372,7 @@ static int system_power_mod_init(fwk_id_t module_id,
     const struct mod_system_power_config *config;
 
     fwk_assert(data != NULL);
-    fwk_expect(element_count > 0);
+    fwk_check(element_count > 0);
 
     system_power_ctx.config = config = data;
     system_power_ctx.mod_pd_system_id = FWK_ID_NONE;
@@ -440,10 +439,6 @@ static int system_power_bind(fwk_id_t id, unsigned int round)
     }
 
     if (fwk_id_is_type(id, FWK_ID_TYPE_MODULE)) {
-        status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-            FWK_ID_API(FWK_MODULE_IDX_LOG, 0), &system_power_ctx.log_api);
-        if (status != FWK_SUCCESS)
-            return status;
 
         config = system_power_ctx.config;
 

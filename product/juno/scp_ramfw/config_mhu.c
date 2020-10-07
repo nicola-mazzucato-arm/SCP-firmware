@@ -5,13 +5,18 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "juno_mhu.h"
+#include "system_mmap.h"
+
+#include <mod_mhu.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
-#include <mod_mhu.h>
-#include <juno_irq.h>
-#include <juno_mhu.h>
-#include <system_mmap.h>
+
+#include <fmw_cmsis.h>
+
+#include <stddef.h>
 
 static const struct fwk_element element_table[] = {
     [JUNO_MHU_DEVICE_IDX_S] = {
@@ -25,7 +30,7 @@ static const struct fwk_element element_table[] = {
     },
     [JUNO_MHU_DEVICE_IDX_NS_H] = {
         .name = "",
-        .sub_element_count = 1,
+        .sub_element_count = 2,
         .data = &(struct mod_mhu_device_config) {
             .irq = MHU_HIGH_PRIO_IRQ,
             .in = MHU_CPU_INTR_H_BASE,
@@ -50,6 +55,5 @@ static const struct fwk_element *get_element_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_mhu = {
-    .get_element_table = get_element_table,
-    .data = NULL,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_element_table),
 };

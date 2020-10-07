@@ -10,6 +10,8 @@
 
 #include <mod_sds.h>
 
+#include <stdint.h>
+
 /*
  * Structure identifiers.
  */
@@ -23,6 +25,14 @@ enum n1sdp_sds_struct_id {
     N1SDP_SDS_CPU_FLAGS =            7 | (1 << MOD_SDS_ID_VERSION_MAJOR_POS),
     N1SDP_SDS_PLATFORM_INFO =        8 | (1 << MOD_SDS_ID_VERSION_MAJOR_POS),
     N1SDP_SDS_BL33_INFO =            9 | (1 << MOD_SDS_ID_VERSION_MAJOR_POS),
+};
+
+enum n1sdp_sds_region_idx {
+    N1SDP_SDS_REGION_SECURE,
+#ifdef BUILD_MODE_DEBUG
+    N1SDP_SDS_REGION_NONSECURE,
+#endif
+    N1SDP_SDS_REGION_COUNT,
 };
 
 /*

@@ -1,4 +1,4 @@
- /*
+/*
  * Arm SCP/MCP Software
  * Copyright (c) 2019-2020, Arm Limited and Contributors. All rights reserved.
  *
@@ -14,7 +14,7 @@
 
 /*!
  * \addtogroup GroupN1SDPModule N1SDP Product Modules
- * @{
+ * \{
  */
 
 /*!
@@ -34,11 +34,11 @@ struct mod_n1sdp_ddr_phy_element_config {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_N1SDP_DDR_PHY_H */

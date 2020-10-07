@@ -5,25 +5,29 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <string.h>
+#include "synquacer_ddr.h"
+
+#include <ddr_init.h>
+
+#include <internal/scmi_vendor_ext.h>
+
+#include <mod_scmi.h>
+
 #include <fwk_assert.h>
-#include <fwk_element.h>
 #include <fwk_id.h>
+#include <fwk_log.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_status.h>
-#include <mod_log.h>
-#include <mod_scmi.h>
-#include <ddr_init.h>
-#include <synquacer_ddr.h>
-#include <internal/scmi.h>
-#include <internal/scmi_vendor_ext.h>
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
 
 struct scmi_vendor_ext_ctx {
     const struct mod_scmi_from_protocol_api *scmi_api;
     const struct mod_vendor_ext_api *vendor_ext_api;
-    const struct mod_log_api *log_api;
     uint32_t vendor_ext_count;
 };
 
@@ -46,18 +50,19 @@ static int scmi_vendor_ext_protocol_memory_info_get_handler(
 static struct scmi_vendor_ext_ctx scmi_vendor_ext_ctx;
 
 static int (*handler_table[])(fwk_id_t, const uint32_t *) = {
-    [SCMI_PROTOCOL_VERSION] = scmi_vendor_ext_protocol_version_handler,
-    [SCMI_PROTOCOL_ATTRIBUTES] = scmi_vendor_ext_protocol_attributes_handler,
-    [SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
+    [MOD_SCMI_PROTOCOL_VERSION] = scmi_vendor_ext_protocol_version_handler,
+    [MOD_SCMI_PROTOCOL_ATTRIBUTES] =
+        scmi_vendor_ext_protocol_attributes_handler,
+    [MOD_SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
         scmi_vendor_ext_protocol_msg_attributes_handler,
     [SCMI_VENDOR_EXT_MEMORY_INFO_GET] =
         scmi_vendor_ext_protocol_memory_info_get_handler,
 };
 
 static unsigned int payload_size_table[] = {
-    [SCMI_PROTOCOL_VERSION] = 0,
-    [SCMI_PROTOCOL_ATTRIBUTES] = 0,
-    [SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
+    [MOD_SCMI_PROTOCOL_VERSION] = 0,
+    [MOD_SCMI_PROTOCOL_ATTRIBUTES] = 0,
+    [MOD_SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
         sizeof(struct scmi_protocol_message_attributes_a2p),
     [SCMI_VENDOR_EXT_MEMORY_INFO_GET] = 0,
 };
@@ -194,8 +199,7 @@ static int scmi_vendor_ext_protocol_memory_info_get_handler(
 {
     memset(&resp, 0, sizeof(struct scmi_vendor_ext_memory_info_get_resp));
 
-    scmi_vendor_ext_ctx.log_api->log(
-        MOD_LOG_GROUP_DEBUG, "[scmi_vendor_ext] memory info get handler.\n");
+    FWK_LOG_INFO("[scmi_vendor_ext] memory info get handler.");
 
     get_memory_info(&resp.meminfo);
 
@@ -226,16 +230,15 @@ static int scmi_vendor_ext_message_handler(
 {
     int32_t return_value;
 
-    scmi_vendor_ext_ctx.log_api->log(
-        MOD_LOG_GROUP_DEBUG, "[scmi_vendor_ext] message handler.\n");
+    FWK_LOG_INFO("[scmi_vendor_ext] message handler.");
 
     static_assert(
         FWK_ARRAY_SIZE(handler_table) == FWK_ARRAY_SIZE(payload_size_table),
         "[SCMI] vendor_ext management protocol table sizes not consistent");
-    assert(payload != NULL);
+    fwk_assert(payload != NULL);
 
     if (message_id >= FWK_ARRAY_SIZE(handler_table)) {
-        return_value = SCMI_NOT_SUPPORTED;
+        return_value = SCMI_NOT_FOUND;
         goto error;
     }
 
@@ -268,7 +271,7 @@ static int scmi_vendor_ext_init(
 {
     if (element_count != 0) {
         /* This module should not have any elements */
-        assert(false);
+        fwk_unexpected();
         return FWK_E_SUPPORT;
     }
 
@@ -283,19 +286,12 @@ static int scmi_vendor_ext_bind(fwk_id_t id, unsigned int round)
         return FWK_SUCCESS;
 
     status = fwk_module_bind(
-        FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-        FWK_ID_API(FWK_MODULE_IDX_LOG, 0),
-        &scmi_vendor_ext_ctx.log_api);
-    if (status != FWK_SUCCESS)
-        return status;
-
-    status = fwk_module_bind(
         FWK_ID_MODULE(FWK_MODULE_IDX_SCMI),
         FWK_ID_API(FWK_MODULE_IDX_SCMI, MOD_SCMI_API_IDX_PROTOCOL),
         &scmi_vendor_ext_ctx.scmi_api);
     if (status != FWK_SUCCESS) {
         /* Failed to bind to SCMI module */
-        assert(false);
+        fwk_unexpected();
         return status;
     }
 
@@ -311,8 +307,7 @@ static int scmi_vendor_ext_process_bind_request(
     if (!fwk_id_is_equal(source_id, FWK_ID_MODULE(FWK_MODULE_IDX_SCMI)))
         return FWK_E_ACCESS;
 
-    scmi_vendor_ext_ctx.log_api->log(
-        MOD_LOG_GROUP_DEBUG, "[scmi_vendor_ext] process bind request.\n");
+    FWK_LOG_INFO("[scmi_vendor_ext] process bind request.");
 
     *api = &scmi_vendor_ext_mod_scmi_to_protocol_api;
 

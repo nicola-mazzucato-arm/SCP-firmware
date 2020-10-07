@@ -5,18 +5,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stddef.h>
-#include <fwk_element.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
+#include "clock_devices.h"
+#include "config_power_domain.h"
+#include "sgm775_core.h"
+
 #include <mod_clock.h>
 #include <mod_css_clock.h>
-#include <mod_system_pll.h>
 #include <mod_pik_clock.h>
 #include <mod_power_domain.h>
-#include <config_power_domain.h>
-#include <clock_devices.h>
-#include <sgm775_core.h>
+#include <mod_system_pll.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
 
 static struct fwk_element clock_dev_desc_table[] = {
     [CLOCK_DEV_IDX_BIG] = {
@@ -89,10 +91,11 @@ static struct fwk_element clock_dev_desc_table[] = {
 static const struct fwk_element *clock_get_dev_desc_table(fwk_id_t module_id)
 {
     unsigned int i;
-    unsigned int core_count;
+    unsigned int core_count, cluster_count;
     struct mod_clock_dev_config *dev_config;
 
     core_count = sgm775_core_get_count();
+    cluster_count = sgm775_cluster_get_count();
 
     /* Configure all clocks to respond to changes in SYSTOP power state */
     for (i = 0; i < CLOCK_DEV_IDX_COUNT; i++) {
@@ -100,15 +103,14 @@ static const struct fwk_element *clock_get_dev_desc_table(fwk_id_t module_id)
             (struct mod_clock_dev_config *)clock_dev_desc_table[i].data;
         dev_config->pd_source_id = FWK_ID_ELEMENT(
             FWK_MODULE_IDX_POWER_DOMAIN,
-            CONFIG_POWER_DOMAIN_SYSTOP_CHILD_COUNT + core_count);
+            CONFIG_POWER_DOMAIN_SYSTOP_SYSTEM + core_count + cluster_count);
     }
 
     return clock_dev_desc_table;
 }
 
 struct fwk_module_config config_clock = {
-    .get_element_table = clock_get_dev_desc_table,
-    .data = &((struct mod_clock_config) {
+    .data = &((struct mod_clock_config){
         .pd_transition_notification_id = FWK_ID_NOTIFICATION_INIT(
             FWK_MODULE_IDX_POWER_DOMAIN,
             MOD_PD_NOTIFICATION_IDX_POWER_STATE_TRANSITION),
@@ -116,4 +118,6 @@ struct fwk_module_config config_clock = {
             FWK_MODULE_IDX_POWER_DOMAIN,
             MOD_PD_NOTIFICATION_IDX_POWER_STATE_PRE_TRANSITION),
     }),
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(clock_get_dev_desc_table),
 };

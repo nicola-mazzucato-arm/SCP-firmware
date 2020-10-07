@@ -5,11 +5,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "system_clock.h"
+#include "system_mmap.h"
+
+#include <mod_gtimer.h>
+
+#include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
-#include <mod_gtimer.h>
-#include <system_mmap.h>
-#include <system_clock.h>
+#include <fwk_time.h>
 
 static const struct fwk_element element_table[] = {
     [0] = {
@@ -25,11 +29,11 @@ static const struct fwk_element element_table[] = {
     [1] = { 0 },
 };
 
-static const struct fwk_element *get_element_table(fwk_id_t module_id)
-{
-    return element_table;
-}
-
 struct fwk_module_config config_gtimer = {
-    .get_element_table = get_element_table,
+    .elements = FWK_MODULE_STATIC_ELEMENTS_PTR(element_table),
 };
+
+struct fwk_time_driver fmw_time_driver(const void **ctx)
+{
+    return mod_gtimer_driver(ctx, config_gtimer.elements.table[0].data);
+}

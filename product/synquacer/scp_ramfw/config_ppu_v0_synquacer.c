@@ -5,19 +5,23 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
+#include "synquacer_core.h"
+#include "synquacer_mmap.h"
+
+#include <mod_power_domain.h>
+#include <mod_ppu_v0.h>
+
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_interrupt.h>
 #include <fwk_macros.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
-#include <mod_ppu_v0.h>
-#include <synquacer_core.h>
-#include <synquacer_irq.h>
-#include <synquacer_mmap.h>
-#include <config_ppu_v0.h>
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 #define PPU_V0_NAME_SIZE (12)
 
@@ -149,5 +153,5 @@ static const struct fwk_element *ppu_v0_get_element_table(fwk_id_t module_id)
  * Power module configuration data
  */
 const struct fwk_module_config config_ppu_v0_synquacer = {
-    .get_element_table = ppu_v0_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(ppu_v0_get_element_table),
 };

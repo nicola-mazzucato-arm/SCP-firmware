@@ -5,12 +5,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <fwk_element.h>
-#include <fwk_module.h>
+#include "config_ppu_v0.h"
+#include "scp_rdn1e1_mmap.h"
+
+#include <mod_power_domain.h>
 #include <mod_ppu_v0.h>
-#include <config_ppu_v0.h>
-#include <scp_rdn1e1_irq.h>
-#include <scp_rdn1e1_mmap.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
 
 static struct fwk_element ppu_v0_element_table[] = {
     [PPU_V0_ELEMENT_IDX_DBGTOP] = {
@@ -33,5 +36,5 @@ static const struct fwk_element *ppu_v0_get_element_table(fwk_id_t module_id)
  * Power module configuration data
  */
 const struct fwk_module_config config_ppu_v0 = {
-    .get_element_table = ppu_v0_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(ppu_v0_get_element_table),
 };

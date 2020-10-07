@@ -11,9 +11,13 @@
 #ifndef INTERNAL_SCMI_VENDOR_EXT_H
 #define INTERNAL_SCMI_VENDOR_EXT_H
 
+#include <fwk_attributes.h>
+
+#include <stdint.h>
+
 /*!
  * \addtogroup GroupSYNQUACERModule SYNQUACER Product Modules
- * @{
+ * \{
  */
 
 /*!
@@ -23,7 +27,7 @@
  *
  * \details This module implements a SCMI vendor extension protocol.
  *
- * @{
+ * \{
  */
 
 /*! SCMI protocol id for vendor extension message. */
@@ -42,7 +46,7 @@ enum scmi_vendor_ext_command_id {
 /*!
  * \brief PROTOCOL_ATTRIBUTES
  */
-struct __attribute((packed)) scmi_vendor_ext_protocol_attributes_p2a {
+struct FWK_PACKED scmi_vendor_ext_protocol_attributes_p2a {
     /*! SCMI status. */
     int32_t status;
     /*! attributes. */
@@ -73,7 +77,7 @@ struct memory_info_array {
 /*!
  * \brief memory mapping information structure.
  */
-struct __attribute((packed)) synquacer_memory_info {
+struct FWK_PACKED synquacer_memory_info {
     /*! number of memory regions. */
     uint32_t array_num;
     /*! reserved. */
@@ -95,11 +99,11 @@ struct scmi_vendor_ext_memory_info_get_resp {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* INTERNAL_SCMI_VENDOR_EXT_H */

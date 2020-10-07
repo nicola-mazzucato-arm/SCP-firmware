@@ -5,15 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <sid_reg.h>
+
+#include <mod_pcid.h>
+#include <mod_sid.h>
+#include <mod_system_info.h>
+
 #include <fwk_assert.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <fwk_mm.h>
-#include <mod_pcid.h>
-#include <mod_sid.h>
-#include <mod_system_info.h>
-#include <sid_reg.h>
+#include <fwk_status.h>
+
+#include <stddef.h>
 
 static bool initialized;
 static struct mod_sid_info info;
@@ -57,13 +61,14 @@ static int sid_init(
     struct sid_reg *sid_reg;
 
     if ((config == NULL) || (config->sid_base == 0) || (element_count == 0)) {
-        assert(false);
+        fwk_unexpected();
         return FWK_E_DATA;
     }
 
     sid_reg = (struct sid_reg *)config->sid_base;
 
-    assert(mod_pcid_check_registers(&sid_reg->pcid, &config->pcid_expected));
+    fwk_assert(
+        mod_pcid_check_registers(&sid_reg->pcid, &config->pcid_expected));
 
     info.system_major_revision =
         (sid_reg->SYSTEM_ID & SID_SYS_SOC_ID_MAJOR_REVISION_MASK)
@@ -110,7 +115,7 @@ static int sid_subsystem_init(
 {
     const struct mod_sid_subsystem_config *subsystem_config;
 
-    assert(data != NULL);
+    fwk_assert(data != NULL);
 
     subsystem_config = data;
     if (subsystem_config->part_number == info.system_part_number) {

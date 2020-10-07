@@ -8,16 +8,17 @@
 #ifndef MOD_SDS_H
 #define MOD_SDS_H
 
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module_idx.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <fwk_element.h>
-#include <fwk_module_idx.h>
-#include <fwk_id.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
@@ -26,7 +27,7 @@
  * \details Provides a framework for the structured storage of data that is
  *      shared between the SCP Firmware and application processor firmware.
  *
- * @{
+ * \{
  */
 
 /*
@@ -54,14 +55,42 @@
 #define MOD_SDS_ID_VERSION_MAJOR_MASK 0xFF000000
 
 /*!
+ * \brief Element descriptor that describes an SDS region that will be
+ *      automatically created during module initialization.
+ */
+struct mod_sds_region_desc {
+    /*!
+     * \brief Base address of the SDS region.
+     */
+    void *base;
+
+    /*!
+     * \brief Size in bytes of the SDS Memory Region.
+     *
+     * \note If the SDS module is initialized and a region already exists then
+     *       the region will be resized to match the size given here. The
+     *       existing region may be increased or shrunk, as required. In the
+     *       latter case the new size must be sufficient to hold the existing
+     *       contents and if it is not then the initialization process will
+     *       fail.
+     */
+    size_t size;
+};
+
+/*!
  * \brief Element descriptor that describes an SDS structure that will be
  *      automatically created during element initialization.
  */
 struct mod_sds_structure_desc {
     /*! Identifier of the structure to be created. */
     uint32_t id;
+
+    /*! Identifier of the SDS region containing the structure. */
+    uint32_t region_id;
+
     /*! Size, in bytes, of the structure. */
     size_t size;
+
     /*!
      *  Payload of the structure. If not equal to NULL, as part of the
      *  initialization of the module's elements, the payload of the structure
@@ -69,6 +98,7 @@ struct mod_sds_structure_desc {
      *  'payload'.
      */
     const void *payload;
+
     /*! Set the valid flag in the structure if true. */
     bool finalize;
 };
@@ -77,20 +107,17 @@ struct mod_sds_structure_desc {
  * \brief Module configuration.
  */
 struct mod_sds_config {
-    /*! Base address of the region used for shared data storage */
-    uintptr_t region_base_address;
+    /*!
+     * Descriptors of all the SDS regions the module will use.
+     */
+    const struct mod_sds_region_desc *regions;
 
     /*!
-     * Size, in bytes, of the SDS Memory Region. If the SDS module is
-     *      initialized and a region already exists then the region will be
-     *      resized to match the size given here. The existing region may be
-     *      grown or shrunk, as required. In the latter case the new size must
-     *      be sufficient to hold the existing contents and if it is not then
-     *      the initialization process will fail.
+     * Number of SDS regions managed by the module.
      */
-    size_t region_size;
+    unsigned int region_count;
 
-#if BUILD_HAS_MOD_CLOCK
+#ifdef BUILD_HAS_MOD_CLOCK
     /*! Identifier of the clock that this module depends on */
     fwk_id_t clock_id;
 #endif
@@ -143,10 +170,11 @@ struct mod_sds_api {
      *
      * \param size Size, in bytes, of the data to be written.
      *
-     * \retval FWK_SUCCESS Data was successfully written to the structure.
-     * \retval FWK_E_PARAM The data pointer parameter was NULL.
-     * \retval FWK_E_PARAM An invalid structure identifier was provided.
-     * \retval FWK_E_RANGE The field extends outside of the structure bounds.
+     * \retval ::FWK_SUCCESS Data was successfully written to the structure.
+     * \retval ::FWK_E_PARAM An invalid parameter was encountered:
+     *      - The `data` parameter was a null pointer value.
+     *      - An invalid structure identifier was provided.
+     * \retval ::FWK_E_RANGE The field extends outside of the structure bounds.
      */
     int (*struct_write)(uint32_t structure_id, unsigned int offset,
                         const void *data, size_t size);
@@ -177,10 +205,11 @@ struct mod_sds_api {
      * \param size Size, in bytes, of the storage pointed to by the data
      *       parameter.
      *
-     * \retval FWK_SUCCESS Data was successfully read from the structure.
-     * \retval FWK_E_PARAM The data pointer parameter was NULL.
-     * \retval FWK_E_PARAM An invalid structure identifier was provided.
-     * \retval FWK_E_RANGE The field extends outside of the structure bounds.
+     * \retval ::FWK_SUCCESS Data was successfully read from the structure.
+     * \retval ::FWK_E_PARAM An invalid parameter was encountered:
+     *      - The `data` parameter was a null pointer value.
+     *      - An invalid structure identifier was provided.
+     * \retval ::FWK_E_RANGE The field extends outside of the structure bounds.
      */
     int (*struct_read)(uint32_t structure_id, unsigned int offset, void *data,
                        size_t size);
@@ -192,19 +221,19 @@ struct mod_sds_api {
      * \param structure_id The identifier of the Shared Data Structure to
      *      finalize.
      *
-     * \retval FWK_SUCCESS The structure was successfully finalized.
-     * \retval FWK_E_PARAM An invalid structure identifier was provided.
-     * \retval FWK_E_STATE The structure has already been finalized.
+     * \retval ::FWK_SUCCESS The structure was successfully finalized.
+     * \retval ::FWK_E_PARAM An invalid structure identifier was provided.
+     * \retval ::FWK_E_STATE The structure has already been finalized.
      */
     int (*struct_finalize)(uint32_t structure_id);
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_SDS_H */

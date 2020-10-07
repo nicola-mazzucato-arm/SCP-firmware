@@ -10,12 +10,12 @@
 
 /*!
  * \cond
- * @{
  */
+
+#include <fwk_macros.h>
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <fwk_macros.h>
 
 struct ppu_v0_reg {
     FWK_RW uint32_t POWER_POLICY;
@@ -141,7 +141,6 @@ int ppu_v0_get_power_mode(struct ppu_v0_reg *ppu, enum ppu_v0_mode *mode);
 
 /*!
  * \endcond
- * @}
  */
 
 #endif /* PPU_V0_H */

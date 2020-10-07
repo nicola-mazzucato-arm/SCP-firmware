@@ -5,14 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "juno_mmap.h"
+
+#include <mod_dw_apb_i2c.h>
+#include <mod_i2c.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_dw_apb_i2c.h>
-#include <mod_i2c.h>
-#include <juno_irq.h>
-#include <juno_mmap.h>
+
+#include <fmw_cmsis.h>
+
+#include <stdint.h>
 
 static const struct fwk_element dw_apb_i2c_element_table[] = {
     [0] = {
@@ -33,7 +38,7 @@ static const struct fwk_element *dw_apb_i2c_get_element_table(
 }
 
 struct fwk_module_config config_dw_apb_i2c = {
-    .get_element_table = dw_apb_i2c_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(dw_apb_i2c_get_element_table),
 };
 
 static const struct fwk_element i2c_element_table[] = {
@@ -54,5 +59,5 @@ static const struct fwk_element *i2c_get_element_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_i2c = {
-    .get_element_table = i2c_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(i2c_get_element_table),
 };

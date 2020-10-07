@@ -5,19 +5,27 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
-#include <fwk_assert.h>
-#include <fwk_id.h>
-#include <fwk_mm.h>
-#include <fwk_module.h>
-#include <fwk_multi_thread.h>
-#include <fwk_status.h>
+#include "juno_id.h"
+
 #include <mod_i2c.h>
 #include <mod_juno_xrp7724.h>
 #include <mod_psu.h>
 #include <mod_sensor.h>
 #include <mod_timer.h>
-#include <juno_id.h>
+
+#include <fwk_assert.h>
+#include <fwk_event.h>
+#include <fwk_id.h>
+#include <fwk_mm.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+#include <fwk_multi_thread.h>
+#include <fwk_status.h>
+#include <fwk_thread.h>
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /* Maximum required length for the I2C transmissions */
 #define TRANSMIT_DATA_MAX   3
@@ -110,7 +118,7 @@ struct psu_set_enabled_param {
 };
 
 struct psu_set_voltage_param {
-    uint64_t voltage;
+    uint32_t voltage;
     uint16_t set_value;
 };
 
@@ -133,13 +141,13 @@ struct juno_xrp7724_dev_psu_ctx {
     bool psu_set_enabled;
 
     /*  Cache for the voltage of the PSU element */
-    uint64_t current_voltage;
+    uint32_t current_voltage;
 
     /*
      * This field is used when doing a set_voltage request to propagate the
      * voltage parameter through the processing of the request
      */
-    uint64_t psu_set_voltage;
+    uint32_t psu_set_voltage;
     enum juno_xrp7724_psu_request psu_request;
 };
 
@@ -364,7 +372,7 @@ static int juno_xrp7724_get_enabled(fwk_id_t id, bool *enabled)
     return FWK_SUCCESS;
 }
 
-static int juno_xrp7724_set_voltage(fwk_id_t id, uint64_t voltage)
+static int juno_xrp7724_set_voltage(fwk_id_t id, uint32_t voltage)
 {
     int status;
     struct fwk_event event;
@@ -427,7 +435,7 @@ static int juno_xrp7724_set_voltage(fwk_id_t id, uint64_t voltage)
     return FWK_PENDING;
 }
 
-static int juno_xrp7724_get_voltage(fwk_id_t id, uint64_t *voltage)
+static int juno_xrp7724_get_voltage(fwk_id_t id, uint32_t *voltage)
 {
     int status;
     struct fwk_event event;

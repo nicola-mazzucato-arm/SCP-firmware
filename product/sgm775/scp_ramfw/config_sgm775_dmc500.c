@@ -5,12 +5,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "system_mmap.h"
+
+#include <mod_sgm775_dmc500.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_sgm775_dmc500.h>
-#include <system_mmap.h>
 
 static struct fwk_element sgm775_dmc500_element_table[] = {
     [0] = { .name = "DMC500-0",
@@ -52,8 +54,10 @@ static const struct fwk_element *sgm775_dmc500_get_element_table(
 
 /* Configuration of the DMC500 module. */
 struct fwk_module_config config_sgm775_dmc500 = {
-    .get_element_table = sgm775_dmc500_get_element_table,
-    .data = &((struct mod_sgm775_dmc500_module_config) {
+    .data =
+        &(struct mod_sgm775_dmc500_module_config){
             .timer_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_TIMER, 0),
-        }),
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(sgm775_dmc500_get_element_table),
 };

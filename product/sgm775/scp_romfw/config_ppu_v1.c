@@ -5,16 +5,17 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stddef.h>
+#include "sgm775_mmap.h"
+
+#include <mod_msys_rom.h>
+#include <mod_power_domain.h>
+#include <mod_ppu_v1.h>
+
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_interrupt.h>
-#include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_msys_rom.h>
-#include <mod_ppu_v1.h>
-#include <sgm775_irq.h>
-#include <sgm775_mmap.h>
 
 static struct fwk_element sgm775_ppu_v1_element_table[] = {
     {
@@ -49,11 +50,13 @@ static const struct fwk_element *sgm775_ppu_v1_get_element_table(
  * Power module configuration data
  */
 struct fwk_module_config config_ppu_v1 = {
-    .get_element_table = sgm775_ppu_v1_get_element_table,
-    .data = &(struct mod_ppu_v1_config) {
-        .pd_notification_id = FWK_ID_NOTIFICATION_INIT(
-            FWK_MODULE_IDX_MSYS_ROM,
-            MOD_MSYS_ROM_NOTIFICATION_IDX_POWER_SYSTOP),
-        .pd_source_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_MSYS_ROM),
-    },
+    .data =
+        &(struct mod_ppu_v1_config){
+            .pd_notification_id = FWK_ID_NOTIFICATION_INIT(
+                FWK_MODULE_IDX_MSYS_ROM,
+                MOD_MSYS_ROM_NOTIFICATION_IDX_POWER_SYSTOP),
+            .pd_source_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_MSYS_ROM),
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(sgm775_ppu_v1_get_element_table),
 };

@@ -11,15 +11,17 @@
 #ifndef MOD_DMC500_H
 #define MOD_DMC500_H
 
-#include <stdint.h>
+#include <mod_timer.h>
+
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
-#include <mod_log.h>
-#include <mod_timer.h>
+
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
@@ -28,7 +30,7 @@
  * \details Please consult the Arm CoreLink DMC-500 Dynamic Memory Controller
  *      Technical Reference Manual for details on the specific registers that
  *      are programmed here.
- * @{
+ * \{
  */
 
 /*!
@@ -37,7 +39,6 @@
 struct mod_dmc500_reg {
     /*!
      * \cond
-     * @{
      */
     FWK_R   uint32_t SI0_SI_STATUS;
     FWK_R   uint32_t SI0_SI_INTERRUPT_STATUS;
@@ -406,9 +407,8 @@ struct mod_dmc500_reg {
     FWK_R   uint32_t COMPONENT_ID_2;
     FWK_R   uint32_t COMPONENT_ID_3;
     /*!
-    * \endcond
-    * @}
-    */
+     * \endcond
+     */
 };
 
 /*!
@@ -527,7 +527,7 @@ struct mod_dmc_ddr_phy_api {
      * \param element_id Element identifier corresponding to the device to
      *      configure.
      *
-     * \retval FWK_SUCCESS if the operation succeed.
+     * \retval ::FWK_SUCCESS if the operation succeed.
      * \return one of the error code otherwise.
      */
     int (*configure)(fwk_id_t element_id);
@@ -558,11 +558,11 @@ struct mod_dmc500_module_config {
 extern const struct fwk_module module_dmc500;
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_DMC500_H */

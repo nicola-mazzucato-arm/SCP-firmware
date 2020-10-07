@@ -8,19 +8,23 @@
  *     N1SDP SCP to PCC communications protocol driver
  */
 
-#include <stdint.h>
+#include <internal/n1sdp_scp2pcc.h>
+
+#include <mod_n1sdp_scp2pcc.h>
+
+#include <fwk_id.h>
+#include <fwk_log.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_log.h>
-#include <mod_n1sdp_scp2pcc.h>
+#include <fwk_status.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 /* Module context */
 struct n1sdp_scp2pcc_ctx {
     /*  Pointer to module configuration */
     struct mem_msg_config_st *config;
-
-    /* Log API pointer */
-    const struct mod_log_api *log_api;
 
     /* Sequence variable */
     unsigned int sequence;
@@ -69,13 +73,12 @@ static int mem_msg_send_message(void *data, uint16_t size, uint16_t type)
     struct mem_msg_packet_st *packet = NULL;
 
     if (type == SCP2PCC_TYPE_SHUTDOWN)
-        scp2pcc_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                                 "Shutdown request to PCC\n");
+        FWK_LOG_INFO("Shutdown request to PCC");
 
     /* Check parameters. */
     if ((size > MSG_PAYLOAD_SIZE) ||
         (type == MSG_UNUSED_MESSAGE_TYPE)) {
-        scp2pcc_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Invalid parameters\n");
+        FWK_LOG_INFO("Invalid parameters");
         return FWK_E_PARAM;
     }
 
@@ -138,16 +141,6 @@ static int n1sdp_scp2pcc_init(fwk_id_t module_id, unsigned int unused,
     return FWK_SUCCESS;
 }
 
-static int n1sdp_scp2pcc_bind(fwk_id_t id, unsigned int round)
-{
-    if (round == 0) {
-        return fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-            MOD_LOG_API_ID, &scp2pcc_ctx.log_api);
-    }
-
-    return FWK_SUCCESS;
-}
-
 static int n1sdp_scp2pcc_process_bind_request(fwk_id_t requester_id,
     fwk_id_t target_id, fwk_id_t api_id, const void **api)
 {
@@ -169,7 +162,6 @@ const struct fwk_module module_n1sdp_scp2pcc = {
     .api_count = 1,
     .type = FWK_MODULE_TYPE_PROTOCOL,
     .init = n1sdp_scp2pcc_init,
-    .bind = n1sdp_scp2pcc_bind,
     .process_bind_request = n1sdp_scp2pcc_process_bind_request,
     .start = n1sdp_scp2pcc_start,
 };

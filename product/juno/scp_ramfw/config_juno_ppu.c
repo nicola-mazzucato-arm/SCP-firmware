@@ -5,15 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "juno_alarm_idx.h"
+#include "juno_ppu_idx.h"
+#include "system_mmap.h"
+
+#include <mod_juno_ppu.h>
+#include <mod_power_domain.h>
+
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_juno_ppu.h>
-#include <juno_alarm_idx.h>
-#include <juno_irq.h>
-#include <juno_ppu_idx.h>
-#include <system_clock.h>
-#include <system_mmap.h>
+
+#include <fmw_cmsis.h>
 
 static struct fwk_element element_table[] = {
     [JUNO_PPU_DEV_IDX_BIG_SSTOP] = {
@@ -131,10 +135,13 @@ static const struct fwk_element *get_element_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_juno_ppu = {
-    .get_element_table = get_element_table,
-    .data = &((struct mod_juno_ppu_config) {
-        .timer_alarm_id = FWK_ID_SUB_ELEMENT_INIT(FWK_MODULE_IDX_TIMER,
-                                                  0,
-                                                  JUNO_PPU_ALARM_IDX),
-    }),
+    .data =
+        &(struct mod_juno_ppu_config){
+            .timer_alarm_id = FWK_ID_SUB_ELEMENT_INIT(
+                FWK_MODULE_IDX_TIMER,
+                0,
+                JUNO_PPU_ALARM_IDX),
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_element_table),
 };

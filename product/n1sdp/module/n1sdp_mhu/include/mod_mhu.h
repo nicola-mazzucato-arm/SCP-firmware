@@ -11,17 +11,18 @@
 #ifndef MOD_MHU_H
 #define MOD_MHU_H
 
-#include <stdint.h>
 #include <fwk_macros.h>
+
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupN1SDPModule N1SDP Product Modules
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupN1SDPMHU N1SDP Message Handling Unit (MHU) Driver
- * @{
+ * \{
  */
 
 /*!
@@ -43,11 +44,11 @@ struct mod_mhu_device_config {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_MHU_H */

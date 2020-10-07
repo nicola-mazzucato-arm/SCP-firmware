@@ -5,28 +5,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
-
-#include <fwk_assert.h>
-#include <fwk_id.h>
-#include <fwk_interrupt.h>
-#include <fwk_macros.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <fwk_multi_thread.h>
-#include <fwk_notification.h>
-
-#include <mod_ccn512.h>
-#include <mod_clock.h>
-#include <mod_f_i2c.h>
-#include <mod_hsspi.h>
-#include <mod_log.h>
 #include <mod_power_domain.h>
 #include <mod_synquacer_system.h>
 #include <mod_system_power.h>
-#include <mod_timer.h>
 
-#include <synquacer_mmap.h>
+#include <fwk_event.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+#include <fwk_multi_thread.h>
+#include <fwk_status.h>
+#include <fwk_thread.h>
+
+#include <stdbool.h>
 
 struct synquacer_system_ctx synquacer_system_ctx;
 const struct fwk_module_config config_synquacer_system = { 0 };
@@ -48,9 +40,7 @@ int synquacer_main(void);
 static int synquacer_system_shutdown(
     enum mod_pd_system_shutdown system_shutdown)
 {
-    synquacer_system_ctx.log_api->log(
-        MOD_LOG_GROUP_DEBUG,
-        "[SYNQUACER SYSTEM] requesting synquacer system_shutdown\n");
+    FWK_LOG_INFO("[SYNQUACER SYSTEM] requesting synquacer system_shutdown");
 
     reboot_chip();
 
@@ -79,13 +69,6 @@ static int synquacer_system_bind(fwk_id_t id, unsigned int round)
     int status;
 
     if (round == 0) {
-        status = fwk_module_bind(
-            FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-            FWK_ID_API(FWK_MODULE_IDX_LOG, 0),
-            &synquacer_system_ctx.log_api);
-        if (status != FWK_SUCCESS)
-            return status;
-
         status = fwk_module_bind(
             FWK_ID_MODULE(FWK_MODULE_IDX_CCN512),
             FWK_ID_API(FWK_MODULE_IDX_CCN512, 0),
@@ -135,9 +118,7 @@ static int synquacer_system_start(fwk_id_t id)
 
     main_initialize();
 
-    synquacer_system_ctx.log_api->log(
-        MOD_LOG_GROUP_DEBUG,
-        "[SYNQUACER SYSTEM] Request system initialization.\n");
+    FWK_LOG_INFO("[SYNQUACER SYSTEM] Request system initialization.");
 
     status = fwk_thread_create(FWK_ID_MODULE(FWK_MODULE_IDX_SYNQUACER_SYSTEM));
     if (status != FWK_SUCCESS)
@@ -163,9 +144,7 @@ int synquacer_process_event(
     struct fwk_event *resp)
 {
     if (fwk_id_get_event_idx(event->id) == SYNQUACER_SYSTEM_EVENT_START) {
-        synquacer_system_ctx.log_api->log(
-            MOD_LOG_GROUP_DEBUG,
-            "[SYNQUACER SYSTEM] Process system start event.\n");
+        FWK_LOG_INFO("[SYNQUACER SYSTEM] Process system start event.");
         synquacer_main();
     }
 

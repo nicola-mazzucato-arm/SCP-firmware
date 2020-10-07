@@ -5,19 +5,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
+#include "config_power_domain.h"
+#include "sgm775_core.h"
+#include "sgm775_mhu.h"
+#include "sgm775_scmi.h"
+#include "software_mmap.h"
+
+#include <mod_smt.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_clock.h>
-#include <mod_smt.h>
-#include <sgm775_core.h>
-#include <sgm775_mhu.h>
-#include <sgm775_scmi.h>
-#include <config_power_domain.h>
-#include <clock_devices.h>
-#include <software_mmap.h>
+
+#include <stdint.h>
 
 static const struct fwk_element smt_element_table[] = {
     [SGM775_SCMI_SERVICE_IDX_PSCI] = {
@@ -66,13 +67,16 @@ static const struct fwk_element *smt_get_element_table(fwk_id_t module_id)
 
     for (idx = 0; idx < SGM775_SCMI_SERVICE_IDX_COUNT; idx++) {
         config = (struct mod_smt_channel_config *)(smt_element_table[idx].data);
-        config->pd_source_id = FWK_ID_ELEMENT(FWK_MODULE_IDX_POWER_DOMAIN,
-            CONFIG_POWER_DOMAIN_SYSTOP_CHILD_COUNT + sgm775_core_get_count());
+
+        config->pd_source_id = FWK_ID_ELEMENT(
+            FWK_MODULE_IDX_POWER_DOMAIN,
+            CONFIG_POWER_DOMAIN_SYSTOP_SYSTEM + sgm775_core_get_count() +
+                sgm775_cluster_get_count());
     }
 
     return smt_element_table;
 }
 
 struct fwk_module_config config_smt = {
-    .get_element_table = smt_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(smt_get_element_table),
 };

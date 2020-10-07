@@ -5,18 +5,23 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "synquacer_ddr.h"
+
+#include <internal/ccn512.h>
+
+#include <mod_ccn512.h>
+
 #include <fwk_assert.h>
-#include <fwk_mm.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_status.h>
-#include <mod_ccn512.h>
-#include <mod_log.h>
-#include <synquacer_ddr.h>
-#include <synquacer_mmap.h>
-#include <sysdef_option.h>
 
-static struct mod_log_api *log_api;
+#include <fmw_cmsis.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 #define HNF_COUNT 8
 #define SNF_ID_DMC1 0x8ULL
@@ -130,13 +135,13 @@ void fw_ccn512_exit(void)
     unsigned int i;
 
     module_config = fwk_module_get_data(fwk_module_id_ccn512);
-    assert(module_config != NULL);
+    fwk_assert(module_config != NULL);
 
     ccn512 = module_config->reg_base;
 
     ccn5xx_hnf_reg_t *hnf = &ccn512->HNF_ID_2;
 
-    log_api->log(MOD_LOG_GROUP_DEBUG, "[CCN512] CCN512 exit.\n");
+    FWK_LOG_INFO("[CCN512] CCN512 exit.");
 
     /* exit ALL CA53 CPU SNOOP */
     for (i = 0; i < HNF_COUNT; i++)
@@ -145,19 +150,16 @@ void fw_ccn512_exit(void)
     /* Wait for write operations to finish. */
     __DMB();
 
-    log_api->log(MOD_LOG_GROUP_DEBUG, "[CCN512] CCN512 exit end.\n");
+    FWK_LOG_INFO("[CCN512] CCN512 exit end.");
 }
 
 static int ccn512_config(ccn512_reg_t *ccn512)
 {
-    log_api->log(
-        MOD_LOG_GROUP_DEBUG,
-        "[CCN512] Initialising ccn512 at 0x%x\n",
-        (uintptr_t)ccn512);
+    FWK_LOG_INFO("[CCN512] Initialising ccn512 at 0x%x", (uintptr_t)ccn512);
 
     fw_ccn512_init(ccn512);
 
-    log_api->log(MOD_LOG_GROUP_DEBUG, "[CCN512] CCN512 init done.\n");
+    FWK_LOG_INFO("[CCN512] CCN512 init done.");
 
     return FWK_SUCCESS;
 }
@@ -180,15 +182,13 @@ static int mod_ccn512_element_init(
     unsigned int unused,
     const void *data)
 {
-    assert(data != NULL);
+    fwk_assert(data != NULL);
 
     return FWK_SUCCESS;
 }
 
 static int mod_ccn512_bind(fwk_id_t id, unsigned int round)
 {
-    int status;
-
     /* Nothing to do in the second round of calls. */
     if (round == 1)
         return FWK_SUCCESS;
@@ -196,11 +196,6 @@ static int mod_ccn512_bind(fwk_id_t id, unsigned int round)
     /* Nothing to do in case of elements. */
     if (fwk_module_is_valid_element_id(id))
         return FWK_SUCCESS;
-
-    status = fwk_module_bind(
-        FWK_ID_MODULE(FWK_MODULE_IDX_LOG), MOD_LOG_API_ID, &log_api);
-    if (status != FWK_SUCCESS)
-        return status;
 
     return FWK_SUCCESS;
 }
@@ -211,7 +206,7 @@ static int mod_ccn512_start(fwk_id_t id)
     ccn512_reg_t *ccn512;
 
     module_config = fwk_module_get_data(fwk_module_id_ccn512);
-    assert(module_config != NULL);
+    fwk_assert(module_config != NULL);
 
     ccn512 = module_config->reg_base;
 

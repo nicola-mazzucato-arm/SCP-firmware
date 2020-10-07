@@ -5,14 +5,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
+#include "low_level_access.h"
+#include "synquacer_mmap.h"
 
-#include <synquacer_debug.h>
-#include <synquacer_mmap.h>
-#include <low_level_access.h>
+#include <sysdef_option.h>
 
 #include <internal/nic400.h>
-#include <sysdef_option.h>
+
+#include <mod_synquacer_system.h>
+
+#include <fwk_log.h>
+#include <fwk_macros.h>
+
+#include <inttypes.h>
+#include <stdint.h>
 
 #define NIC_TOP_ADDR_SEC_REG (0x00000008)
 #define NIC_SEC_REG_OFFSET (0x04)
@@ -22,8 +28,8 @@ static void nic_sec_slave_security(
     uint32_t slave_index,
     uint32_t value)
 {
-    SYNQUACER_DEV_LOG_DEBUG(
-        "%s addr 0x%08x value 0x%08x\n",
+    FWK_LOG_INFO(
+        "%s addr 0x%08" PRIx32 " value 0x%08" PRIx32,
         __func__,
         (nic_top_addr + NIC_TOP_ADDR_SEC_REG +
          NIC_SEC_REG_OFFSET * slave_index),

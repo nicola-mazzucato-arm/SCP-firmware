@@ -5,16 +5,23 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
-#include <string.h>
+#include <mod_fip.h>
+#include <mod_n1sdp_rom.h>
+
+#include <fwk_event.h>
+#include <fwk_id.h>
 #include <fwk_interrupt.h>
+#include <fwk_log.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_status.h>
 #include <fwk_thread.h>
-#include <mod_n1sdp_flash.h>
-#include <mod_n1sdp_rom.h>
-#include <mod_log.h>
+
+#include <fmw_cmsis.h>
+
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
 
 /*
  * Module context
@@ -23,11 +30,8 @@ struct mod_n1sdp_rom_ctx {
     /* ROM configuration structure */
     const struct n1sdp_rom_config *rom_config;
 
-    /* Pointer to log API */
-    struct mod_log_api *log_api;
-
-    /* Pointer to n1sdp_flash API */
-    struct mod_n1sdp_flash_api *flash_api;
+    /* Pointer to FIP API */
+    struct mod_fip_api *fip_api;
 };
 
 enum rom_event {
@@ -39,8 +43,8 @@ static struct mod_n1sdp_rom_ctx n1sdp_rom_ctx;
 
 static void jump_to_ramfw(void)
 {
-    uintptr_t const *reset_base =
-        (uintptr_t *)(n1sdp_rom_ctx.rom_config->ramfw_base + 0x4);
+    uintptr_t ramfw_base = n1sdp_rom_ctx.rom_config->ramfw_base;
+    uintptr_t const *reset_base = (uintptr_t *)(ramfw_base + 0x4);
     void (*ramfw_reset_handler)(void);
 
     /*
@@ -50,6 +54,9 @@ static void jump_to_ramfw(void)
     fwk_interrupt_global_disable();
 
     ramfw_reset_handler = (void (*)(void))*reset_base;
+
+    /* Set the vector table offset register */
+    SCB->VTOR = ramfw_base;
 
     /*
      * Execute the RAM firmware's reset handler to pass control from ROM
@@ -78,18 +85,11 @@ static int n1sdp_rom_bind(fwk_id_t id, unsigned int round)
 
     /* Use second round only (round numbering is zero-indexed) */
     if (round == 1) {
-        /* Bind to the log component */
-        status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-                                 FWK_ID_API(FWK_MODULE_IDX_LOG, 0),
-                                 &n1sdp_rom_ctx.log_api);
-
-        if (status != FWK_SUCCESS)
-            return FWK_E_PANIC;
-
         /* Bind to the n1sdp_flash component */
-        status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_N1SDP_FLASH),
-                                 FWK_ID_API(FWK_MODULE_IDX_N1SDP_FLASH, 0),
-                                 &n1sdp_rom_ctx.flash_api);
+        status = fwk_module_bind(
+            FWK_ID_MODULE(FWK_MODULE_IDX_FIP),
+            FWK_ID_API(FWK_MODULE_IDX_FIP, 0),
+            &n1sdp_rom_ctx.fip_api);
         if (status != FWK_SUCCESS)
             return FWK_E_PANIC;
     }
@@ -108,68 +108,44 @@ static int n1sdp_rom_start(fwk_id_t id)
     return fwk_thread_put_event(&event);
 }
 
+static const char *get_image_type_str(enum mod_fip_toc_entry_type type)
+{
+    if (type == MOD_FIP_TOC_ENTRY_MCP_BL2)
+        return "MCP";
+    if (type == MOD_FIP_TOC_ENTRY_SCP_BL2)
+        return "SCP";
+    return "???";
+}
+
 static int n1sdp_rom_process_event(const struct fwk_event *event,
     struct fwk_event *resp)
 {
-    struct mod_n1sdp_fip_descriptor *fip_desc_table = NULL;
-    struct mod_n1sdp_fip_descriptor *fip_desc = NULL;
-    unsigned int fip_count = 0;
-    unsigned int i;
-    int status;
+    struct mod_fip_entry_data entry;
+    int status = n1sdp_rom_ctx.fip_api->get_entry(
+        n1sdp_rom_ctx.rom_config->image_type, &entry);
+    const char *image_type =
+        get_image_type_str(n1sdp_rom_ctx.rom_config->image_type);
 
-    status = n1sdp_rom_ctx.flash_api->get_n1sdp_fip_descriptor_count(
-                 FWK_ID_MODULE(FWK_MODULE_IDX_N1SDP_ROM),
-                 &fip_count);
-    if (status != FWK_SUCCESS)
+    if (status != FWK_SUCCESS) {
+        FWK_LOG_INFO(
+            "[ROM] Failed to locate %s_BL2, error: %d\n", image_type, status);
         return status;
-    status = n1sdp_rom_ctx.flash_api->get_n1sdp_fip_descriptor_table(
-                 FWK_ID_MODULE(FWK_MODULE_IDX_N1SDP_ROM),
-                 &fip_desc_table);
-    if (status != FWK_SUCCESS)
-        return status;
-
-    for (i = 0; i < fip_count; i++) {
-        fip_desc = &fip_desc_table[i];
-        if (fip_desc->type != n1sdp_rom_ctx.rom_config->image_type)
-            continue;
-
-        if (fip_desc->size == 0)
-            return FWK_E_DATA;
-
-        if (fip_desc->type == MOD_N1SDP_FIP_TYPE_MCP_BL2) {
-            n1sdp_rom_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                "[ROM] Found MCP RAM Firmware at address: 0x%x,"
-                " size: %d bytes, flags: 0x%x\n",
-                fip_desc->address,
-                fip_desc->size,
-                fip_desc->flags);
-                n1sdp_rom_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                "[ROM] Copying MCP RAM Firmware to ITCRAM...!\n");
-        } else {
-            n1sdp_rom_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                "[ROM] Found SCP BL2 RAM Firmware at address: 0x%x,"
-                " size: %d bytes, flags: 0x%x\n",
-                fip_desc->address,
-                fip_desc->size,
-                fip_desc->flags);
-                n1sdp_rom_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-                "[ROM] Copying SCP RAM Firmware to ITCRAM...!\n");
-        }
-        break;
     }
 
-    if (i >= fip_count)
-        return FWK_E_DATA;
+    FWK_LOG_INFO("[ROM] Located %s_BL2:\n", image_type);
+    FWK_LOG_INFO("[ROM]   address: %p\n", entry.base);
+    FWK_LOG_INFO("[ROM]   size   : %u\n", entry.size);
+    FWK_LOG_INFO("[ROM]   flags  : 0x%08" PRIX32 "%08" PRIX32"\n",
+        (uint32_t)(entry.flags >> 32),  (uint32_t)entry.flags);
+    FWK_LOG_INFO("[ROM] Copying %s_BL2 to ITCRAM...!\n", image_type);
 
-    memcpy((void *)n1sdp_rom_ctx.rom_config->ramfw_base,
-        (uint8_t *)fip_desc->address, fip_desc->size);
-    n1sdp_rom_ctx.log_api->log(MOD_LOG_GROUP_INFO, "[ROM] Done!\n");
+    memcpy(
+        (void *)n1sdp_rom_ctx.rom_config->ramfw_base, entry.base, entry.size);
+    FWK_LOG_INFO("[ROM] Done!");
 
-    n1sdp_rom_ctx.log_api->log(MOD_LOG_GROUP_INFO,
-        "[ROM] Jumping to RAM Firmware\n");
+    FWK_LOG_INFO("[ROM] Jumping to %s_BL2\n", image_type);
 
     jump_to_ramfw();
-
     return FWK_SUCCESS;
 }
 

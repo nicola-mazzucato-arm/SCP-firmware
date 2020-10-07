@@ -8,11 +8,11 @@
 #ifndef SCP_SYSTEM_MMAP_H
 #define SCP_SYSTEM_MMAP_H
 
-#include <scp_sgi575_mmap.h>
+#include "scp_sgi575_mmap.h"
 
 #define SCP_PLAT_BASE           (SCP_SYS0_BASE + 0x3FFE0000)
 
-#define SCP_PLL_BASE            (SCP_EXPANSION2_BASE + 0x01000000)
+#define SCP_PLL_BASE            (SCP_EXPANSION3_BASE + 0x03000000)
 
 #define SCP_PLL_SYSPLL          (SCP_PLL_BASE)
 #define SCP_PLL_CLUS0           (SCP_PLL_BASE + 0x00000004)

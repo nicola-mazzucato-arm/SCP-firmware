@@ -8,13 +8,18 @@
 #ifndef MOD_F_I2C_H
 #define MOD_F_I2C_H
 
-#include <stdint.h>
-#include <fwk_id.h>
 #include <i2c_api.h>
+
+#include <internal/i2c_depend.h>
+#include <internal/i2c_driver.h>
+
+#include <fwk_id.h>
+
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupSYNQUACERModule SYNQUACER Product Modules
- * @{
+ * \{
  */
 
 /*!
@@ -24,7 +29,7 @@
  *
  * \details This module implements a device driver for the F_I2C
  *
- * @{
+ * \{
  */
 
 /*!
@@ -96,11 +101,11 @@ struct mod_f_i2c_config {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_F_I2C_H */

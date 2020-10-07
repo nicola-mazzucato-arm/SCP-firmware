@@ -5,13 +5,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <fwk_element.h>
 #include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <mod_hsspi.h>
-#include <synquacer_mmap.h>
+
+#include <stddef.h>
 
 /* Configuration of the HSSPI module. */
-const struct fwk_module_config config_hsspi = {
-    .get_element_table = NULL,
-};
+const struct fwk_module_config config_hsspi = { 0 };

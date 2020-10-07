@@ -5,11 +5,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <fwk_element.h>
-#include <fwk_module.h>
+#include "sgm775_mmap.h"
+#include "sgm775_ssc.h"
+
 #include <mod_sid.h>
-#include <sgm775_mmap.h>
-#include <sgm775_ssc.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
 
 static const struct fwk_element subsystem_table[] = {
     {
@@ -27,7 +30,6 @@ static const struct fwk_element *get_subsystem_table(fwk_id_t id)
 }
 
 struct fwk_module_config config_sid = {
-    .get_element_table = get_subsystem_table,
     .data = &(struct mod_sid_config) {
         .sid_base = SSC_BASE,
         .pcid_expected = {
@@ -41,4 +43,6 @@ struct fwk_module_config config_sid = {
             .CID3 = 0xB1,
         },
     },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_subsystem_table),
 };

@@ -11,6 +11,7 @@
 #include <fwk_id.h>
 #include <fwk_module_idx.h>
 #include <fwk_status.h>
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -161,7 +162,7 @@ struct mod_psu_device_api {
      *
      * \return Status code representing the result of the operation.
      */
-    int (*get_voltage)(fwk_id_t device_id, uint64_t *voltage);
+    int (*get_voltage)(fwk_id_t device_id, uint32_t *voltage);
 
     /*!
      * \brief Set the voltage of a device.
@@ -176,7 +177,7 @@ struct mod_psu_device_api {
      *
      * \return Status code representing the result of the operation.
      */
-    int (*set_voltage)(fwk_id_t device_id, uint64_t voltage);
+    int (*set_voltage)(fwk_id_t device_id, uint32_t voltage);
 };
 
 /*!
@@ -221,7 +222,7 @@ struct mod_psu_response {
          * \warning Used only in response to a ::mod_psu_device_api::get_voltage
          *      call.
          */
-        uint64_t voltage;
+        uint32_t voltage;
     };
 };
 
@@ -314,7 +315,7 @@ struct mod_psu_driver_api {
      *
      * \return Status code representing the result of the operation.
      */
-    int (*get_voltage)(fwk_id_t id, uint64_t *voltage);
+    int (*get_voltage)(fwk_id_t id, uint32_t *voltage);
 
     /*!
      * \brief Set the voltage of a device.
@@ -328,7 +329,7 @@ struct mod_psu_driver_api {
      *
      * \return Status code representing the result of the operation.
      */
-    int (*set_voltage)(fwk_id_t id, uint64_t voltage);
+    int (*set_voltage)(fwk_id_t id, uint32_t voltage);
 };
 
 /*!
@@ -365,7 +366,7 @@ struct mod_psu_driver_response {
          * \warning Used only in response to a
          *      ::mod_psu_driver_api::get_voltage call.
          */
-        uint64_t voltage;
+        uint32_t voltage;
     };
 };
 

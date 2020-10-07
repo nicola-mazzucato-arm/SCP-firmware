@@ -8,10 +8,12 @@
 #ifndef DIMM_SPD_H
 #define DIMM_SPD_H
 
-#include <stdint.h>
 #include <mod_n1sdp_dmc620.h>
-#include <mod_log.h>
 #include <mod_n1sdp_i2c.h>
+
+#include <fwk_attributes.h>
+
+#include <stdint.h>
 
 /*
  * DMC-620 ADDRESS_CONTROL register bit field values
@@ -209,7 +211,7 @@
  *  Address 0x000 - 0x07F
  *  This section defines parameters that are common to all DDR4 module types
  */
-struct ddr4_dram_param {
+struct FWK_PACKED ddr4_dram_param {
     /* Number of Bytes used */
     uint8_t num_bytes;
     /* SPD Revision */
@@ -336,16 +338,16 @@ struct ddr4_dram_param {
     uint8_t crc_lsb;
     /* Cyclical Redundancy Code (CRC) for Base Configuration Section, MSB */
     uint8_t crc_msb;
-} __attribute__((packed));
+};
 
-struct ddr4_spd {
-  struct ddr4_dram_param dram_param;
-  uint8_t standard_mod[64];
-  uint8_t hybrid_mod[64];
-  uint8_t hybrid_ext_func[64];
-  uint8_t mfg_info[64];
-  uint8_t end_usr[128];
-} __attribute__((packed));
+struct FWK_PACKED ddr4_spd {
+    struct ddr4_dram_param dram_param;
+    uint8_t standard_mod[64];
+    uint8_t hybrid_mod[64];
+    uint8_t hybrid_ext_func[64];
+    uint8_t mfg_info[64];
+    uint8_t end_usr[128];
+};
 
 /*
  * SPD API function prototypes
@@ -366,11 +368,9 @@ int dimm_spd_init_check(struct mod_n1sdp_i2c_master_api_polled *i2c_api,
 /*
  * Brief - Function to print the DIMM card information
  *
- * param - log_api - Pointer to log module APIs
- *
  * retval - NONE
  */
-void dimm_spd_mem_info(struct mod_log_api *log_api);
+void dimm_spd_mem_info(void);
 
 /*
  * Brief - Function to calculate DMC-620 ADDRESS_CONTROL register value

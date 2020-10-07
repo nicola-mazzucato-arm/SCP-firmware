@@ -8,19 +8,20 @@
 #ifndef FWK_MULTI_THREAD_H
 #define FWK_MULTI_THREAD_H
 
+#include <fwk_attributes.h>
 #include <fwk_event.h>
 #include <fwk_id.h>
 #include <fwk_thread.h>
 
 /*!
  * \addtogroup GroupLibFramework Framework
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupThread Threading
  *
- * @{
+ * \{
  */
 
 /*!
@@ -38,15 +39,15 @@
  *
  * \param id Identifier of the module or element to create the thread for.
  *
- * \retval FWK_SUCCESS The module/element thread was created.
- * \retval FWK_E_PARAM The identifier is not a valid module or element
+ * \retval ::FWK_SUCCESS The module/element thread was created.
+ * \retval ::FWK_E_PARAM The identifier is not a valid module or element
  *     identifier.
- * \retval FWK_E_INIT The thread framework component is not initialized.
- * \retval FWK_E_STATE The execution has already started, or it is not possible
- *      to create a thread anymore, or a thread has already been created for the
- *      given module or element.
- * \retval FWK_E_NOMEM A memory allocation failed.
- * \retval FWK_E_OS Operating system error.
+ * \retval ::FWK_E_INIT The thread framework component is not initialized.
+ * \retval ::FWK_E_STATE The execution has already started, or it is not
+ *      possible to create a thread anymore, or a thread has already been
+ *      created for the given module or element.
+ * \retval ::FWK_E_NOMEM A memory allocation failed.
+ * \retval ::FWK_E_OS Operating system error.
  */
 int fwk_thread_create(fwk_id_t id);
 
@@ -66,26 +67,38 @@ int fwk_thread_create(fwk_id_t id);
  *      The event identifier and target identifier are validated and must
  *      belong to the same module.
  *
+ *      Warning: As this API could have serious adverse effects on system
+ *               performance and throughput, this API has been deprecated
+ *               and should not be used in single-threaded mode.
+ *
  * \param event Event to put into the queue for processing. Must not be \c NULL.
  * \param[out] resp_event The response event. Must not be \c NULL.
  *
- * \retval FWK_SUCCESS The event was successfully processed.
- * \retval FWK_E_STATE The execution is not started.
- * \retval FWK_E_PARAM One or more of the parameters were invalid.
- * \retval FWK_E_PARAM One or more fields in the \p event parameter were
- *      invalid.
- * \retval FWK_E_ACCESS The API is called from an ISR, called from the common
+ * \retval ::FWK_SUCCESS The event was successfully processed.
+ * \retval ::FWK_E_STATE The execution is not started.
+ * \retval ::FWK_E_PARAM An invalid parameter was encountered:
+ *      - The `event` parameter was a null pointer value.
+ *      - One or more fields of the event were invalid.
+ * \retval ::FWK_E_ACCESS The API is called from an ISR, called from the common
  *      thread, or the event targets the calling thread.
  */
+#ifdef BUILD_HAS_MULTITHREADING
 int fwk_thread_put_event_and_wait(struct fwk_event *event,
-                                  struct fwk_event *resp_event);
+    struct fwk_event *resp_event);
+
+#else
+int fwk_thread_put_event_and_wait(
+    struct fwk_event *event,
+    struct fwk_event *resp_event) FWK_DEPRECATED;
+
+#endif
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* FWK_MULTI_THREAD_H */

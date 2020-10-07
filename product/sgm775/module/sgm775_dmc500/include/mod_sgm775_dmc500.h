@@ -11,20 +11,22 @@
 #ifndef MOD_SGM775_DMC500_H
 #define MOD_SGM775_DMC500_H
 
-#include <stdint.h>
+#include <mod_timer.h>
+
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
-#include <mod_log.h>
-#include <mod_timer.h>
+
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupSGM775Module SGM775 Product Modules
- * @{
+ * \{
  */
 
 /*!
  * \addtogroup GroupSGM775_DMC SGM775 DMC-500 Driver
- * @{
+ * \{
  */
 
 /*!
@@ -33,7 +35,6 @@
 struct mod_sgm775_dmc500_reg {
     /*!
      * \cond
-     * @{
      */
     FWK_R   uint32_t SI0_SI_STATUS;
     FWK_R   uint32_t SI0_SI_INTERRUPT_STATUS;
@@ -402,9 +403,8 @@ struct mod_sgm775_dmc500_reg {
     FWK_R   uint32_t COMPONENT_ID_2;
     FWK_R   uint32_t COMPONENT_ID_3;
     /*!
-    * \endcond
-    * @}
-    */
+     * \endcond
+     */
 };
 
 /*!
@@ -443,7 +443,7 @@ struct mod_sgm775_dmc_ddr_phy_api {
      * \param element_id Element identifier corresponding to the device to
      *      configure.
      *
-     * \retval FWK_SUCCESS if the operation succeed.
+     * \retval ::FWK_SUCCESS if the operation succeed.
      * \return One of the standard framework error codes.
      */
     int (*configure)(fwk_id_t element_id);
@@ -461,11 +461,11 @@ struct mod_sgm775_dmc500_module_config {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_SGM775_DMC500_H */

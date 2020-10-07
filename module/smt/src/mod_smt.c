@@ -5,20 +5,25 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdbool.h>
-#include <string.h>
+#include <internal/smt.h>
+
+#include <mod_power_domain.h>
+#include <mod_scmi.h>
+#include <mod_smt.h>
+
 #include <fwk_assert.h>
+#include <fwk_event.h>
+#include <fwk_id.h>
 #include <fwk_interrupt.h>
+#include <fwk_log.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_notification.h>
 #include <fwk_status.h>
-#include <mod_log.h>
-#include <mod_power_domain.h>
-#include <mod_scmi.h>
-#include <mod_smt.h>
-#include <internal/smt.h>
+
+#include <stdbool.h>
+#include <string.h>
 
 struct smt_channel_ctx {
     /* Channel identifier */
@@ -39,23 +44,26 @@ struct smt_channel_ctx {
     /* Driver entity identifier */
     fwk_id_t driver_id;
 
-    /* SCMI module service bound to the channel */
-    fwk_id_t scmi_service_id;
+    /* service bound to the channel */
+    fwk_id_t service_id;
 
     /* Driver API */
     struct mod_smt_driver_api *driver_api;
 
-    /* SCMI service API */
-    struct mod_scmi_from_transport_api *scmi_api;
+    /* service APIs to signal incoming messages or errors */
+    union signal_apis {
+        struct mod_scmi_from_transport_api *scmi_api;
+        struct mod_smt_from_transport_api *signal_api;
+    } smt_signal;
+
+    /* Flag indicating the service bound to the channel is of type SCMI */
+    bool is_scmi_channel;
 
     /* Flag indicating the mailbox is ready */
     bool smt_mailbox_ready;
 };
 
 struct smt_ctx {
-    /* Log module API */
-    struct mod_log_api *log_api;
-
     /* Table of channel contexts */
     struct smt_channel_ctx *channel_ctx_table;
 
@@ -73,7 +81,7 @@ static int smt_get_secure(fwk_id_t channel_id, bool *secure)
     struct smt_channel_ctx *channel_ctx;
 
     if (secure == NULL) {
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PARAM;
     }
 
@@ -90,7 +98,7 @@ static int smt_get_max_payload_size(fwk_id_t channel_id, size_t *size)
     struct smt_channel_ctx *channel_ctx;
 
     if (size == NULL) {
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PARAM;
     }
 
@@ -107,7 +115,7 @@ static int smt_get_message_header(fwk_id_t channel_id, uint32_t *header)
     struct smt_channel_ctx *channel_ctx;
 
     if (header == NULL) {
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PARAM;
     }
 
@@ -129,7 +137,7 @@ static int smt_get_payload(fwk_id_t channel_id,
     struct smt_channel_ctx *channel_ctx;
 
     if (payload == NULL) {
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PARAM;
     }
 
@@ -163,8 +171,7 @@ static int smt_write_payload(fwk_id_t channel_id,
         (offset  > channel_ctx->max_payload_size) ||
         (size > channel_ctx->max_payload_size)    ||
         ((offset + size) > channel_ctx->max_payload_size)) {
-
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PARAM;
     }
 
@@ -215,7 +222,64 @@ static int smt_respond(fwk_id_t channel_id, const void *payload, size_t size)
     return FWK_SUCCESS;
 }
 
+
+static int smt_transmit(fwk_id_t channel_id, uint32_t message_header,
+    const void *payload, size_t size)
+{
+    struct smt_channel_ctx *channel_ctx;
+    struct mod_smt_memory *memory;
+
+    if (payload == NULL)
+        return FWK_E_DATA;
+
+    channel_ctx =
+        &smt_ctx.channel_ctx_table[fwk_id_get_element_idx(channel_id)];
+    memory = ((struct mod_smt_memory *)
+        channel_ctx->config->mailbox_address);
+
+    /*
+     * If the agent has not yet read the previous message we
+     * abandon this transmission. We don't want to poll on the BUSY/FREE
+     * bit, and while it is probably safe to just overwrite the data
+     * the agent could be in the process of reading.
+     */
+    if (!(memory->status & MOD_SMT_MAILBOX_STATUS_FREE_MASK))
+        return FWK_E_BUSY;
+
+    memory->message_header = message_header;
+
+    /*
+     * we do not want the agent to send an interrupt when it receives
+     * the message.
+     */
+    memory->flags = 0;
+
+    /* Copy the payload */
+    memcpy(memory->payload, payload, size);
+
+    memory->length = sizeof(memory->message_header) + size;
+    memory->status &= ~MOD_SMT_MAILBOX_STATUS_FREE_MASK;
+
+    /* Notify the agent */
+    channel_ctx->driver_api->raise_interrupt(channel_ctx->driver_id);
+
+    return FWK_SUCCESS;
+}
+
 static const struct mod_scmi_to_transport_api smt_mod_scmi_to_transport_api = {
+    .get_secure = smt_get_secure,
+    .get_max_payload_size = smt_get_max_payload_size,
+    .get_message_header = smt_get_message_header,
+    .get_payload = smt_get_payload,
+    .write_payload = smt_write_payload,
+    .respond = smt_respond,
+    .transmit = smt_transmit,
+};
+
+/*
+ * The following API is intended to be used for NON SCMI messages.
+ */
+static const struct mod_smt_to_transport_api smt_mod_smt_to_transport_api = {
     .get_secure = smt_get_secure,
     .get_max_payload_size = smt_get_max_payload_size,
     .get_message_header = smt_get_message_header,
@@ -243,9 +307,8 @@ static int smt_slave_handler(struct smt_channel_ctx *channel_ctx)
 
     /* Check we have ownership of the mailbox */
     if (memory->status & MOD_SMT_MAILBOX_STATUS_FREE_MASK) {
-        smt_ctx.log_api->log(
-            MOD_LOG_GROUP_ERROR,
-            "[SMT] Mailbox ownership error on channel %u\n",
+        FWK_LOG_ERR(
+            "[SMT] Mailbox ownership error on channel %u",
             fwk_id_get_element_idx(channel_ctx->id));
 
         return FWK_E_STATE;
@@ -274,17 +337,29 @@ static int smt_slave_handler(struct smt_channel_ctx *channel_ctx)
          > channel_ctx->max_payload_size)) {
 
         out->status |= MOD_SMT_MAILBOX_STATUS_ERROR_MASK;
-        return smt_respond(channel_ctx->id, &(int32_t){SCMI_PROTOCOL_ERROR},
-                           sizeof(int32_t));
+
+        if (channel_ctx->is_scmi_channel)
+            status = channel_ctx->smt_signal.scmi_api->signal_error(
+                         channel_ctx->service_id);
+        else
+            status = channel_ctx->smt_signal.signal_api->signal_error(
+                         channel_ctx->service_id);
+
+        return status;
     }
 
     /* Copy payload from shared memory to read buffer */
     payload_size = in->length - sizeof(in->message_header);
     memcpy(in->payload, memory->payload, payload_size);
 
-    /* Let SCMI handle the message */
-    status =
-        channel_ctx->scmi_api->signal_message(channel_ctx->scmi_service_id);
+    /* Let subscribed service handle the message */
+    if (channel_ctx->is_scmi_channel)
+        status = channel_ctx->smt_signal.scmi_api->signal_message(
+                    channel_ctx->service_id);
+    else
+        status = channel_ctx->smt_signal.signal_api->signal_message(
+                    channel_ctx->service_id);
+
     if (status != FWK_SUCCESS)
         return FWK_E_HANDLER;
 
@@ -300,7 +375,7 @@ static int smt_signal_message(fwk_id_t channel_id)
 
     if (!channel_ctx->smt_mailbox_ready) {
         /* Discard any message in the mailbox when not ready */
-        smt_ctx.log_api->log(MOD_LOG_GROUP_ERROR, "[SMT] Message not valid\n");
+        FWK_LOG_ERR("[SMT] Message not valid");
 
         return FWK_SUCCESS;
     }
@@ -308,14 +383,14 @@ static int smt_signal_message(fwk_id_t channel_id)
     switch (channel_ctx->config->type) {
     case MOD_SMT_CHANNEL_TYPE_MASTER:
         /* Not supported yet */
-        assert(false);
+        fwk_unexpected();
         break;
     case MOD_SMT_CHANNEL_TYPE_SLAVE:
         return smt_slave_handler(channel_ctx);
         break;
     default:
         /* Invalid config */
-        assert(false);
+        fwk_unexpected();
         break;
     }
 
@@ -352,7 +427,7 @@ static int smt_channel_init(fwk_id_t channel_id, unsigned int unused,
     if ((channel_ctx->config->type >= MOD_SMT_CHANNEL_TYPE_COUNT) ||
         (channel_ctx->config->mailbox_address == 0) ||
         (channel_ctx->config->mailbox_size == 0)) {
-        assert(false);
+        fwk_unexpected();
         return FWK_E_DATA;
     }
 
@@ -372,11 +447,8 @@ static int smt_bind(fwk_id_t id, unsigned int round)
     struct smt_channel_ctx *channel_ctx;
 
     if (round == 0) {
-        if (fwk_id_is_type(id, FWK_ID_TYPE_MODULE)) {
-            return fwk_module_bind(fwk_module_id_log,
-                                   FWK_ID_API(FWK_MODULE_IDX_LOG, 0),
-                                   &smt_ctx.log_api);
-        }
+        if (fwk_id_is_type(id, FWK_ID_TYPE_MODULE))
+            return FWK_SUCCESS;
 
         channel_ctx = &smt_ctx.channel_ctx_table[fwk_id_get_element_idx(id)];
         status = fwk_module_bind(channel_ctx->config->driver_id,
@@ -389,9 +461,20 @@ static int smt_bind(fwk_id_t id, unsigned int round)
 
     if ((round == 1) && fwk_id_is_type(id, FWK_ID_TYPE_ELEMENT)) {
         channel_ctx = &smt_ctx.channel_ctx_table[fwk_id_get_element_idx(id)];
-        status = fwk_module_bind(channel_ctx->scmi_service_id,
-            FWK_ID_API(FWK_MODULE_IDX_SCMI, MOD_SCMI_API_IDX_TRANSPORT),
-            &channel_ctx->scmi_api);
+
+        if (fwk_id_is_equal(fwk_id_build_module_id(channel_ctx->service_id),
+                        fwk_module_id_scmi)) {
+            status = fwk_module_bind(channel_ctx->service_id,
+                                    FWK_ID_API(FWK_MODULE_IDX_SCMI,
+                                    MOD_SCMI_API_IDX_TRANSPORT),
+                                    &channel_ctx->smt_signal.scmi_api);
+            channel_ctx->is_scmi_channel = true;
+        } else {
+            status = fwk_module_bind(channel_ctx->service_id,
+                                    channel_ctx->config->signal_api_id,
+                                    &channel_ctx->smt_signal.signal_api);
+            channel_ctx->is_scmi_channel = false;
+        }
         if (status != FWK_SUCCESS)
             return status;
     }
@@ -409,7 +492,7 @@ static int smt_process_bind_request(fwk_id_t source_id,
     /* Only bind to a channel (not the whole module) */
     if (!fwk_id_is_type(target_id, FWK_ID_TYPE_ELEMENT)) {
         /* Tried to bind to something other than a specific channel */
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PARAM;
     }
 
@@ -438,7 +521,7 @@ static int smt_process_bind_request(fwk_id_t source_id,
             *api = &driver_input_api;
         } else {
             /* A module that we did not bind to is trying to bind to us */
-            assert(false);
+            fwk_unexpected();
             return FWK_E_ACCESS;
         }
         break;
@@ -446,12 +529,18 @@ static int smt_process_bind_request(fwk_id_t source_id,
     case MOD_SMT_API_IDX_SCMI_TRANSPORT:
         /* SCMI transport API */
         *api = &smt_mod_scmi_to_transport_api;
-        channel_ctx->scmi_service_id = source_id;
+        channel_ctx->service_id = source_id;
+        break;
+
+    case MOD_SMT_API_IDX_TO_TRANSPORT:
+        /* SMT transport API */
+        *api = &smt_mod_smt_to_transport_api;
+        channel_ctx->service_id = source_id;
         break;
 
     default:
         /* Invalid API */
-        assert(false);
+        fwk_unexpected();
         return FWK_E_PARAM;
     }
 
@@ -485,7 +574,7 @@ static int smt_process_notification(
 
     assert(fwk_id_is_equal(event->id,
         mod_pd_notification_id_power_state_transition));
-    assert(fwk_id_is_type(event->target_id, FWK_ID_TYPE_ELEMENT));
+    fwk_assert(fwk_id_is_type(event->target_id, FWK_ID_TYPE_ELEMENT));
 
     params = (struct mod_pd_power_state_transition_notification_params *)
         event->params;

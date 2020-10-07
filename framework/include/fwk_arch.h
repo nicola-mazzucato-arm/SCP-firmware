@@ -17,12 +17,12 @@
 
 /*!
  * \addtogroup GroupLibFramework Framework
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupArch Architecture Interface
- * @{
+ * \{
  */
 
 /*!
@@ -35,14 +35,14 @@ struct fwk_arch_interrupt_driver {
     /*!
      * \brief Enable interrupts.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_SUCCESS Operation succeeded.
      */
     int (*global_enable)(void);
 
     /*!
      * \brief Disable interrupts.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_SUCCESS Operation succeeded.
      */
     int (*global_disable)(void);
 
@@ -52,8 +52,8 @@ struct fwk_arch_interrupt_driver {
      * \param interrupt Interrupt number.
      * \param [out] enabled \c true if the interrupt is enabled, else \c false.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*is_enabled)(unsigned int interrupt, bool *enabled);
 
@@ -62,8 +62,8 @@ struct fwk_arch_interrupt_driver {
      *
      * \param interrupt Interrupt number.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*enable)(unsigned int interrupt);
 
@@ -72,8 +72,8 @@ struct fwk_arch_interrupt_driver {
      *
      * \param interrupt Interrupt number.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*disable)(unsigned int interrupt);
 
@@ -83,8 +83,8 @@ struct fwk_arch_interrupt_driver {
      * \param interrupt Interrupt number.
      * \param [out] pending \c true if the interrupt is pending, else \c false.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*is_pending)(unsigned int interrupt, bool *pending);
 
@@ -93,8 +93,8 @@ struct fwk_arch_interrupt_driver {
      *
      * \param interrupt Interrupt number.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*set_pending)(unsigned int interrupt);
 
@@ -103,8 +103,8 @@ struct fwk_arch_interrupt_driver {
      *
      * \param interrupt Interrupt number.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*clear_pending)(unsigned int interrupt);
 
@@ -114,8 +114,8 @@ struct fwk_arch_interrupt_driver {
      * \param interrupt Interrupt number.
      * \param isr Pointer to the interrupt service routine function.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*set_isr_irq)(unsigned int interrupt, void (*isr)(void));
 
@@ -127,8 +127,8 @@ struct fwk_arch_interrupt_driver {
      * \param isr Pointer to the interrupt service routine function.
      * \param parameter Parameter that should be passed to the isr function.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*set_isr_irq_param)(unsigned int interrupt,
                              void (*isr)(uintptr_t param),
@@ -140,8 +140,8 @@ struct fwk_arch_interrupt_driver {
      *
      * \param isr Pointer to the NMI interrupt service routine function.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*set_isr_nmi)(void (*isr)(void));
 
@@ -152,8 +152,8 @@ struct fwk_arch_interrupt_driver {
      * \param isr Pointer to the NMI interrupt service routine function.
      * \param parameter Parameter that should be passed to the isr function.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*set_isr_nmi_param)(void (*isr)(uintptr_t param), uintptr_t parameter);
 
@@ -162,8 +162,8 @@ struct fwk_arch_interrupt_driver {
      *
      * \param isr Pointer to the fault interrupt service routine function.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
      */
     int (*set_isr_fault)(void (*isr)(void));
 
@@ -173,22 +173,11 @@ struct fwk_arch_interrupt_driver {
      *
      * \param [out] interrupt Interrupt number.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
-     * \retval FWK_E_STATE An interrupt is not currently being serviced.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM One or more parameters were invalid.
+     * \retval ::FWK_E_STATE An interrupt is not currently being serviced.
      */
     int (*get_current)(unsigned int *interrupt);
-};
-
-/*!
- * \brief Memory management data descriptor.
- */
-struct fwk_arch_mm_data {
-    /*! Base address of the memory area used for dynamic memory allocation */
-    uintptr_t start;
-
-    /*! Size of the memory area used for dynamic memory allocation */
-    size_t size;
 };
 
 /*!
@@ -199,22 +188,6 @@ struct fwk_arch_mm_data {
  */
 struct fwk_arch_init_driver {
     /*!
-     * \brief Memory management initialization.
-     *
-     * \details This handler is used by the framework to request memory used
-     *      for dynamic allocation.
-     *
-     * \param data Pointer to the memory management descriptor the handler must
-     *      fill in.
-     *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM One or more parameters were invalid.
-     * \retval FWK_E_NOMEM Insufficient memory available.
-     * \retval FWK_E_PANIC Unrecoverable initialization error.
-     */
-    int (*mm)(struct fwk_arch_mm_data *data);
-
-    /*!
      * \brief Interrupt driver initialization.
      *
      * \details This handler is used by the framework library to request the
@@ -222,11 +195,11 @@ struct fwk_arch_init_driver {
      *
      * \param [out] driver Pointer to an interrupt driver.
      *
-     * \retval FWK_SUCCESS Operation succeeded.
-     * \retval FWK_E_PARAM The parameter received by the handler is invalid.
-     * \retval FWK_E_PANIC Unrecoverable initialization error.
+     * \retval ::FWK_SUCCESS Operation succeeded.
+     * \retval ::FWK_E_PARAM The parameter received by the handler is invalid.
+     * \retval ::FWK_E_PANIC Unrecoverable initialization error.
      */
-    int (*interrupt)(struct fwk_arch_interrupt_driver **driver);
+    int (*interrupt)(const struct fwk_arch_interrupt_driver **driver);
 };
 
 /*!
@@ -235,18 +208,18 @@ struct fwk_arch_init_driver {
  * \param driver Pointer to an initialization driver used to perform the
  *      initialization.
  *
- * \retval FWK_SUCCESS Operation succeeded.
- * \retval FWK_E_PARAM One or more parameters were invalid.
- * \retval FWK_E_PANIC Unrecoverable initialization error.
+ * \retval ::FWK_SUCCESS Operation succeeded.
+ * \retval ::FWK_E_PARAM One or more parameters were invalid.
+ * \retval ::FWK_E_PANIC Unrecoverable initialization error.
  */
 int fwk_arch_init(const struct fwk_arch_init_driver *driver);
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* FWK_ARCH_H */

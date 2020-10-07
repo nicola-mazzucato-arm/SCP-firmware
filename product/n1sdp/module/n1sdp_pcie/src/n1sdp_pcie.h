@@ -8,10 +8,14 @@
 #ifndef N1SDP_PCIE_H
 #define N1SDP_PCIE_H
 
-#include <stdint.h>
-#include <fwk_macros.h>
-#include <mod_timer.h>
 #include <internal/pcie_ctrl_apb_reg.h>
+
+#include <mod_timer.h>
+
+#include <fwk_macros.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 /*
  * Definitions of PCIe APB register offsets from global configuration
@@ -64,7 +68,7 @@
  * Note: Execution will block for the specified timeout. If the timeout
  * is too long switch to alarm API instead of blocking.
  */
-#define PCIE_PHY_PLL_LOCK_TIMEOUT      UINT32_C(100)
+#define PCIE_PHY_PLL_LOCK_TIMEOUT UINT32_C(500)
 #define PCIE_CTRL_RC_RESET_TIMEOUT     UINT32_C(100)
 #define PCIE_LINK_TRAINING_TIMEOUT     UINT32_C(100000)
 #define PCIE_LINK_RE_TRAINING_TIMEOUT  UINT32_C(1000000)
@@ -268,7 +272,8 @@
 #define AXI_HIGH_ADDR_BIT_POS          32
 #define AXI_ADDR_NUM_BITS_MAX          ((1 << 6) - 1)
 
-#define TX_PRESET_VALUE                0x4
+#define PCIE_RC_TX_PRESET_VALUE        0x4
+#define CCIX_RC_TX_PRESET_VALUE        0x8
 
 #define GEN3_OFFSET_MIN                0x30C
 #define GEN3_OFFSET_MAX                0x32C
@@ -440,6 +445,18 @@ enum pcie_gen {
     PCIE_GEN_3,
     PCIE_GEN_4,
 };
+
+/*
+ * Identifiers of PCIe LANE COUNT
+ */
+enum pcie_lane_count {
+    LAN_COUNT_IN_X_1,
+    LAN_COUNT_IN_X_2,
+    LAN_COUNT_IN_X_4,
+    LAN_COUNT_IN_X_8,
+    LAN_COUNT_IN_X_16,
+};
+
 /*
  * Structure defining data to be passed to timer API
  */
@@ -504,6 +521,7 @@ bool pcie_wait_condition(void *data);
  * param - timer_api - Pointer to timer API used for timeout detection
  * param - stage - Identifier of current PCIe initialization stage
  * param - gen - PCIe Generation
+ * param - lane_count - PCIe Lane Count
  *
  * retval - FWK_SUCCESS - if the operation is succeeded
  *          FWK_E_TIMEOUT - if initialization times out
@@ -511,7 +529,8 @@ bool pcie_wait_condition(void *data);
 int pcie_init(struct pcie_ctrl_apb_reg *ctrl_apb,
               struct mod_timer_api *timer_api,
               enum pcie_init_stage stage,
-              enum pcie_gen gen);
+              enum pcie_gen gen,
+              enum pcie_lane_count lane_count);
 
 
 /*
@@ -532,8 +551,9 @@ int pcie_link_retrain(struct pcie_ctrl_apb_reg *ctrl_apb,
  * Brief - Function to initialize PCIe PHY layer.
  *
  * param - pcie_phy_base - Base address of the PHY layer registers
+ * param - lane_count - PCIe Lane Count
  */
-void pcie_phy_init(uint32_t phy_apb_base);
+void pcie_phy_init(uint32_t phy_apb_base, uint32_t lane_count);
 
 /*
  * Brief - Function to write to Root Port's/End Point's configuration space.
@@ -568,7 +588,8 @@ int pcie_rp_ep_config_read_word(uint32_t base,
  *
  * param - rp_ep_config_apb_base - Base address of the PCIe configuration
  *                                 APB registers.
- * param - preset - Preset Value
+ * param - down_stream_tx_preset - downstream Preset Value
+ * param - up_stream_tx_preset - upstream Preset Value
  * param - gen - PCIe generation
  *
  * retval - FWK_SUCCESS - if the operation is succeeded
@@ -576,7 +597,8 @@ int pcie_rp_ep_config_read_word(uint32_t base,
  *                       to and read from the register.
  */
 int pcie_set_gen_tx_preset(uint32_t rp_ep_config_apb_base,
-                           uint32_t preset,
+                           uint32_t down_stream_tx_preset,
+                           uint32_t up_stream_tx_preset,
                            enum pcie_gen gen);
 
 /*

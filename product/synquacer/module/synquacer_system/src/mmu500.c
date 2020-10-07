@@ -5,8 +5,13 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <synquacer_debug.h>
-#include <mmu500.h>
+#include "mmu500.h"
+
+#include <mod_synquacer_system.h>
+
+#include <fwk_log.h>
+
+#include <inttypes.h>
 
 void SMMU_setup_PMU(MMU500_Type_t *SMMU)
 {
@@ -28,9 +33,10 @@ void SMMU_setup_PMU(MMU500_Type_t *SMMU)
     pmu_regs[0x0800 / 4] = 0x00000800U; /* PMCGCR0: enable=1, global_basis */
     pmu_regs[0x0e04 / 4] = 0x00000003U; /* PMCR: enable=1, reset=1 */
 
-    SYNQUACER_DEV_LOG_DEBUG(
-        "[MMU500] setup PMU for MMU-500@0x%08x. page_size=%d."
-        "0x%08x(access), 0x%08x(read), 0x%08x(write).\n",
+    FWK_LOG_INFO(
+        "[MMU500] setup PMU for MMU-500@0x%08" PRIx32
+        ". page_size=%d. 0x%08" PRIx32 "(access), 0x%08" PRIx32
+        "(read), 0x%08" PRIx32 "(write).",
         (uint32_t)SMMU,
         page_size,
         (uint32_t)&pmu_regs[0],

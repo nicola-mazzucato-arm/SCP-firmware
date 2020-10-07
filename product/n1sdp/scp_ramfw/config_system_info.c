@@ -5,13 +5,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include <mod_ssc.h>
+#include <mod_system_info.h>
+
+#include <fwk_id.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_system_info.h>
-#include <mod_ssc.h>
+
+#include <stddef.h>
 
 const struct fwk_module_config config_system_info = {
-    .get_element_table = NULL,
     .data = &((struct mod_system_info_config) {
             .system_info_driver_module_id =
                 FWK_ID_MODULE_INIT(FWK_MODULE_IDX_SSC),

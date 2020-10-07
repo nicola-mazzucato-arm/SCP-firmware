@@ -25,6 +25,14 @@ enum sgm775_sds_struct_id {
     SGM775_SDS_BOOTLOADER =           9 | (1 << MOD_SDS_ID_VERSION_MAJOR_POS),
 };
 
+enum sgm775_sds_region_idx {
+    SGM775_SDS_REGION_SECURE,
+#ifdef BUILD_MODE_DEBUG
+    SGM775_SDS_REGION_NONSECURE,
+#endif
+    SGM775_SDS_REGION_COUNT,
+};
+
 /*
  * Structure sizes.
  */

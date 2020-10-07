@@ -8,28 +8,27 @@
  *     N1SDP MCP System Support.
  */
 
-#include <stdint.h>
-#include <fwk_id.h>
-#include <fwk_macros.h>
-#include <fwk_mm.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
-#include <fwk_thread.h>
+#include "config_clock.h"
+
 #include <mod_clock.h>
 #include <mod_n1sdp_mcp_system.h>
-#include <mod_log.h>
 #include <mod_pik_clock.h>
 #include <mod_power_domain.h>
 #include <mod_scmi_agent.h>
-#include <n1sdp_mcp_pik.h>
-#include <config_clock.h>
+
+#include <fwk_event.h>
+#include <fwk_id.h>
+#include <fwk_log.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+#include <fwk_status.h>
+#include <fwk_thread.h>
+
+#include <inttypes.h>
+#include <stdint.h>
 
 /* Module context */
 struct n1sdp_mcp_system_ctx {
-
-    /* Log API pointer */
-    const struct mod_log_api *log_api;
-
     /* SCMI agent API pointer */
     const struct mod_scmi_agent_api *scmi_api;
 
@@ -58,12 +57,6 @@ static int n1sdp_mcp_system_bind(fwk_id_t id, unsigned int round)
     int status;
 
     if (round == 0) {
-        status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-                                 FWK_ID_API(FWK_MODULE_IDX_LOG, 0),
-                                 &n1sdp_mcp_system_ctx.log_api);
-        if (status != FWK_SUCCESS)
-            return status;
-
         status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_SCMI_AGENT),
                                  FWK_ID_API(FWK_MODULE_IDX_SCMI_AGENT, 0),
                                  &n1sdp_mcp_system_ctx.scmi_api);
@@ -113,9 +106,7 @@ static int n1sdp_mcp_system_process_event(const struct fwk_event *event,
     if (status != FWK_SUCCESS)
         return status;
 
-    n1sdp_mcp_system_ctx.log_api->log(MOD_LOG_GROUP_DEBUG,
-        "[MCP SYSTEM] SCP clock status: 0x%x\n",
-        clock_status);
+    FWK_LOG_INFO("[MCP SYSTEM] SCP clock status: 0x%" PRIu32, clock_status);
 
     status = n1sdp_mcp_system_ctx.pik_coreclk_api->process_power_transition(
                  FWK_ID_ELEMENT(FWK_MODULE_IDX_PIK_CLOCK,
@@ -131,8 +122,7 @@ static int n1sdp_mcp_system_process_event(const struct fwk_event *event,
     if (status != FWK_SUCCESS)
         return FWK_SUCCESS;
 
-    n1sdp_mcp_system_ctx.log_api->log(MOD_LOG_GROUP_DEBUG,
-        "[MCP SYSTEM] MCP PIK clocks configured\n");
+    FWK_LOG_INFO("[MCP SYSTEM] MCP PIK clocks configured");
 
     status = n1sdp_mcp_system_ctx.scmi_api->get_chipid_info(
                  FWK_ID_ELEMENT(FWK_MODULE_IDX_SCMI_AGENT, 0),
@@ -140,9 +130,7 @@ static int n1sdp_mcp_system_process_event(const struct fwk_event *event,
     if (status != FWK_SUCCESS)
         return status;
 
-    n1sdp_mcp_system_ctx.log_api->log(MOD_LOG_GROUP_DEBUG,
-        "[MCP SYSTEM] MC Mode: 0x%x CHIPID: 0x%x\n",
-        mc_mode, chipid);
+    FWK_LOG_INFO("[MCP SYSTEM] MC Mode: 0x%x CHIPID: 0x%x", mc_mode, chipid);
 
     return status;
 }

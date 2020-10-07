@@ -14,6 +14,8 @@
 #include <fwk_id.h>
 #include <fwk_module_idx.h>
 
+#include <stdint.h>
+
 /*!
  * \ingroup GroupJunoModule
  *
@@ -106,7 +108,7 @@ struct mod_juno_xrp7724_api_system_mode {
      *      The caller may get a response through an event in case the request
      *      failed.
      *
-     * \retval FWK_PENDING The request was submitted, not yet completed.
+     * \retval ::FWK_PENDING The request was submitted, not yet completed.
      * \return One of the standard framework error codes.
      */
     int (*shutdown)(void);
@@ -120,7 +122,7 @@ struct mod_juno_xrp7724_api_system_mode {
      *      The caller may get a response through an event in case the request
      *      failed.
 
-     * \retval FWK_PENDING The request was submitted, not yet completed.
+     * \retval ::FWK_PENDING The request was submitted, not yet completed.
      * \return One of the standard framework error codes.
      */
     int (*reset)(void);

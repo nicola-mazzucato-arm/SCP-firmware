@@ -5,14 +5,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdbool.h>
+#include "config_clock.h"
+#include "n1sdp_scp_mmap.h"
+
+#include <mod_n1sdp_i2c.h>
+
+#include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
-#include <mod_n1sdp_i2c.h>
-#include <n1sdp_scp_irq.h>
-#include <n1sdp_scp_mmap.h>
-#include <config_clock.h>
+#include <fwk_module_idx.h>
+
+#include <fmw_cmsis.h>
+
+#include <stdbool.h>
 
 static const struct fwk_element i2c_element_desc_table[] = {
     [0] = {
@@ -54,5 +60,5 @@ static const struct fwk_element *get_i2c_table(fwk_id_t module_id)
 }
 
 const struct fwk_module_config config_n1sdp_i2c = {
-    .get_element_table = get_i2c_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_i2c_table),
 };

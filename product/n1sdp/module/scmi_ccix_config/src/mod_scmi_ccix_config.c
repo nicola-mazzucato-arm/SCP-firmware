@@ -8,20 +8,22 @@
  *     SCMI CCIX_CONFIG management protocol support.
  */
 
-#include <string.h>
+#include <internal/mod_scmi_ccix_config.h>
+
+#include <mod_cmn600.h>
+#include <mod_n1sdp_pcie.h>
+#include <mod_scmi.h>
+
 #include <fwk_assert.h>
-#include <fwk_element.h>
 #include <fwk_id.h>
+#include <fwk_log.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_status.h>
-#include <internal/scmi.h>
-#include <internal/mod_scmi_ccix_config.h>
-#include <mod_n1sdp_pcie.h>
-#include <mod_scmi.h>
-#include <mod_cmn600.h>
-#include <mod_log.h>
+
+#include <stdbool.h>
+#include <string.h>
 
 struct scmi_ccix_config_ctx {
     /* scmi module api */
@@ -32,9 +34,6 @@ struct scmi_ccix_config_ctx {
 
     /* PCIe CCIX config api */
     const struct n1sdp_pcie_ccix_config_api *pcie_ccix_config_api;
-
-    /* Log module API */
-    struct mod_log_api *log_api;
 };
 
 static struct scmi_ccix_config_ctx scmi_ccix_config_ctx;
@@ -55,16 +54,13 @@ static int scmi_ccix_config_protocol_enter_system_coherency(fwk_id_t service_id,
     const uint32_t *payload);
 
 static int (*handler_table[])(fwk_id_t, const uint32_t *) = {
-    [SCMI_PROTOCOL_VERSION] =
-        scmi_ccix_config_protocol_version_handler,
-    [SCMI_PROTOCOL_ATTRIBUTES] =
+    [MOD_SCMI_PROTOCOL_VERSION] = scmi_ccix_config_protocol_version_handler,
+    [MOD_SCMI_PROTOCOL_ATTRIBUTES] =
         scmi_ccix_config_protocol_attributes_handler,
-    [SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
+    [MOD_SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
         scmi_ccix_config_protocol_msg_attributes_handler,
-    [SCMI_CCIX_CONFIG_SET] =
-        scmi_ccix_config_protocol_set_handler,
-    [SCMI_CCIX_CONFIG_GET] =
-        scmi_ccix_config_protocol_get_handler,
+    [SCMI_CCIX_CONFIG_SET] = scmi_ccix_config_protocol_set_handler,
+    [SCMI_CCIX_CONFIG_GET] = scmi_ccix_config_protocol_get_handler,
     [SCMI_CCIX_CONFIG_EXCHANGE_PROTOCOL_CREDIT] =
         scmi_ccix_config_protocol_exchange_credit,
     [SCMI_CCIX_CONFIG_ENTER_SYSTEM_COHERENCY] =
@@ -72,12 +68,11 @@ static int (*handler_table[])(fwk_id_t, const uint32_t *) = {
 };
 
 static unsigned int payload_size_table[] = {
-    [SCMI_PROTOCOL_VERSION] = 0,
-    [SCMI_PROTOCOL_ATTRIBUTES] = 0,
-    [SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
+    [MOD_SCMI_PROTOCOL_VERSION] = 0,
+    [MOD_SCMI_PROTOCOL_ATTRIBUTES] = 0,
+    [MOD_SCMI_PROTOCOL_MESSAGE_ATTRIBUTES] =
         sizeof(struct scmi_protocol_message_attributes_a2p),
-    [SCMI_CCIX_CONFIG_SET] =
-        sizeof(struct scmi_ccix_config_protocol_set_a2p),
+    [SCMI_CCIX_CONFIG_SET] = sizeof(struct scmi_ccix_config_protocol_set_a2p),
     [SCMI_CCIX_CONFIG_GET] = 0,
     [SCMI_CCIX_CONFIG_EXCHANGE_PROTOCOL_CREDIT] =
         sizeof(struct scmi_ccix_config_protocol_credit_a2p),
@@ -176,9 +171,8 @@ static int scmi_ccix_config_protocol_get_handler(fwk_id_t service_id,
     if (sizeof(return_values) > max_payload_size) {
         return_values.status = SCMI_OUT_OF_RANGE;
         status = FWK_E_RANGE;
-        scmi_ccix_config_ctx.log_api->log(MOD_LOG_GROUP_DEBUG,
-            "[SCMI CCIX CONFIG] max payload size is  %d\n",
-             max_payload_size);
+        FWK_LOG_INFO(
+            "[SCMI CCIX CONFIG] max payload size is  %d", max_payload_size);
         goto exit;
     }
 
@@ -265,9 +259,8 @@ static int scmi_ccix_config_protocol_set_handler(fwk_id_t service_id,
     if (sizeof(*params) > max_payload_size) {
         return_values.status = SCMI_OUT_OF_RANGE;
         status = FWK_E_RANGE;
-        scmi_ccix_config_ctx.log_api->log(MOD_LOG_GROUP_DEBUG,
-            "[SCMI CCIX CONFIG] max payload size is  %d\n",
-             max_payload_size);
+        FWK_LOG_INFO(
+            "[SCMI CCIX CONFIG] max payload size is  %d", max_payload_size);
         goto exit;
     }
 
@@ -374,7 +367,7 @@ static int scmi_ccix_config_message_handler(fwk_id_t protocol_id,
     fwk_assert(payload != NULL);
 
     if (message_id >= FWK_ARRAY_SIZE(handler_table)) {
-        return_value = SCMI_NOT_SUPPORTED;
+        return_value = SCMI_NOT_FOUND;
         goto error;
     }
 
@@ -406,7 +399,7 @@ static int scmi_ccix_config_init(fwk_id_t module_id,
 {
     if (element_count != 0) {
         /* This module should not have any elements */
-        fwk_assert(false);
+        fwk_unexpected();
         return FWK_E_SUPPORT;
     }
 
@@ -420,20 +413,12 @@ static int scmi_ccix_config_bind(fwk_id_t id, unsigned int round)
     if (round == 1)
         return FWK_SUCCESS;
 
-    status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-        FWK_ID_API(FWK_MODULE_IDX_LOG, 0), &scmi_ccix_config_ctx.log_api);
-    if (status != FWK_SUCCESS) {
-        /* Failed to bind to log module */
-        fwk_assert(false);
-        return status;
-    }
-
     status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_SCMI),
         FWK_ID_API(FWK_MODULE_IDX_SCMI, MOD_SCMI_API_IDX_PROTOCOL),
         &scmi_ccix_config_ctx.scmi_api);
     if (status != FWK_SUCCESS) {
         /* Failed to bind to SCMI module */
-        fwk_assert(false);
+        fwk_unexpected();
         return status;
     }
 
@@ -442,7 +427,7 @@ static int scmi_ccix_config_bind(fwk_id_t id, unsigned int round)
         &scmi_ccix_config_ctx.pcie_ccix_config_api);
     if (status != FWK_SUCCESS) {
         /* Failed to bind to N1SDP PCIE module */
-        fwk_assert(false);
+        fwk_unexpected();
         return status;
     }
 
@@ -451,7 +436,7 @@ static int scmi_ccix_config_bind(fwk_id_t id, unsigned int round)
         &scmi_ccix_config_ctx.cmn600_ccix_config_api);
     if (status != FWK_SUCCESS) {
         /* Failed to bind to CMN600 module */
-        fwk_assert(false);
+        fwk_unexpected();
         return status;
     }
 

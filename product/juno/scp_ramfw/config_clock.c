@@ -5,17 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stddef.h>
-#include <fwk_element.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
+#include "config_power_domain.h"
+#include "juno_clock.h"
+
 #include <mod_clock.h>
 #include <mod_juno_cdcel937.h>
 #include <mod_juno_hdlcd.h>
 #include <mod_juno_soc_clock_ram.h>
 #include <mod_power_domain.h>
-#include <juno_clock.h>
-#include <config_power_domain.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
 
 static struct fwk_element clock_dev_desc_table[] = {
     [JUNO_CLOCK_IDX_I2SCLK] = {
@@ -110,13 +112,15 @@ static const struct fwk_element *clock_get_dev_desc_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_clock = {
-    .get_element_table = clock_get_dev_desc_table,
-    .data = &((struct mod_clock_config) {
-        .pd_transition_notification_id = FWK_ID_NOTIFICATION_INIT(
-            FWK_MODULE_IDX_POWER_DOMAIN,
-            MOD_PD_NOTIFICATION_IDX_POWER_STATE_TRANSITION),
-        .pd_pre_transition_notification_id = FWK_ID_NOTIFICATION_INIT(
-            FWK_MODULE_IDX_POWER_DOMAIN,
-            MOD_PD_NOTIFICATION_IDX_POWER_STATE_PRE_TRANSITION),
-    }),
+    .data =
+        &(struct mod_clock_config){
+            .pd_transition_notification_id = FWK_ID_NOTIFICATION_INIT(
+                FWK_MODULE_IDX_POWER_DOMAIN,
+                MOD_PD_NOTIFICATION_IDX_POWER_STATE_TRANSITION),
+            .pd_pre_transition_notification_id = FWK_ID_NOTIFICATION_INIT(
+                FWK_MODULE_IDX_POWER_DOMAIN,
+                MOD_PD_NOTIFICATION_IDX_POWER_STATE_PRE_TRANSITION),
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(clock_get_dev_desc_table),
 };

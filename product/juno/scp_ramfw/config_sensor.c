@@ -5,18 +5,24 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <string.h>
+#include "config_sensor.h"
+#include "juno_id.h"
+
+#include <mod_juno_adc.h>
+#include <mod_juno_pvt.h>
+#include <mod_juno_xrp7724.h>
+#include <mod_sensor.h>
+
 #include <fwk_assert.h>
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_juno_adc.h>
-#include <mod_juno_pvt.h>
-#include <mod_juno_xrp7724.h>
-#include <config_sensor.h>
-#include <juno_id.h>
+#include <fwk_status.h>
+
+#include <string.h>
 
 static const struct fwk_element sensor_element_table_r0[] = {
     /*
@@ -308,6 +314,7 @@ static const struct fwk_element *get_sensor_element_table(fwk_id_t module_id)
 
     #if USE_FULL_SET_SENSORS
     enum juno_idx_revision rev;
+    size_t pvt_sensor_elem_table_size;
     #endif
 
     size_t sensor_elem_table_size;
@@ -337,6 +344,9 @@ static const struct fwk_element *get_sensor_element_table(fwk_id_t module_id)
                    sensor_element_table_r0,
                    sizeof(sensor_element_table_r0));
         } else {
+            pvt_sensor_elem_table_size =
+                FWK_ARRAY_SIZE(pvt_sensors_juno_r1_r2_elem_table);
+
             /*
              * Add additional sensors available on Juno R1 & R2 and the
              * termination description.
@@ -371,6 +381,5 @@ static const struct fwk_element *get_sensor_element_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_sensor = {
-    .get_element_table = get_sensor_element_table,
-    .data = NULL,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_sensor_element_table),
 };

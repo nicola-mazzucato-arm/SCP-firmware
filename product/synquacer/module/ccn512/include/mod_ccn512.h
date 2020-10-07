@@ -8,14 +8,16 @@
 #ifndef MOD_CCN512_H
 #define MOD_CCN512_H
 
-#include <stdint.h>
+#include <internal/ccn512.h>
+
 #include <fwk_id.h>
 #include <fwk_macros.h>
-#include <internal/ccn512.h>
+
+#include <stdint.h>
 
 /*!
  * \addtogroup GroupSYNQUACERModule SYNQUACER Product Modules
- * @{
+ * \{
  */
 
 /*!
@@ -25,7 +27,7 @@
  *
  * \details This module implements a device driver for the CCN512
  *
- * @{
+ * \{
  */
 
 /*
@@ -34,7 +36,6 @@
 typedef struct {
     /*!
      * \cond
-     * @{
      */
     ccn5xx_mn_reg_t MN_ID_34;
     ccn5xx_dbg_reg_t DEBUG_ID_34;
@@ -91,9 +92,8 @@ typedef struct {
     ccn5xx_region_t RESERVED11[2];
     ccn5xx_rni_reg_t RNI_ID_28;
     /*!
-    * \endcond
-    * @}
-    */
+     * \endcond
+     */
 } ccn512_reg_t;
 
 /*!
@@ -118,11 +118,11 @@ struct mod_ccn512_module_config {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_CCN512_H */

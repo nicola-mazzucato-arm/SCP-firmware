@@ -8,12 +8,14 @@
 #ifndef MOD_HSSPI_H
 #define MOD_HSSPI_H
 
-#include <stdint.h>
-#include <fwk_id.h>
 #include <internal/hsspi_api.h>
+
+#include <fwk_id.h>
+
+#include <stdint.h>
 /*!
  * \addtogroup GroupSYNQUACERModule SYNQUACER Product Modules
- * @{
+ * \{
  */
 
 /*!
@@ -23,7 +25,7 @@
  *
  * \details This module implements a device driver for the HSSPI
  *
- * @{
+ * \{
  */
 
 /*!
@@ -56,11 +58,11 @@ struct mod_hsspi_config {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_HSSPI_H */

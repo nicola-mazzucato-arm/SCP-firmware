@@ -8,13 +8,15 @@
 #ifndef MOD_CMN600_H
 #define MOD_CMN600_H
 
+#include <fwk_id.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
@@ -23,7 +25,7 @@
  * \brief Arm Coherent Mesh Network (CMN) 600 module
  *
  * \details This module adds support for the CMN600 interconnect
- * @{
+ * \{
  */
 
 /*!
@@ -92,10 +94,8 @@ struct mod_cmn600_memory_region_map {
     /*!
      * \brief Target node identifier
      *
-     * \note Not used for \ref
-     *      mod_cmn600_memory_region_type.MOD_CMN600_MEMORY_REGION_TYPE_SYSCACHE
-     *      memory regions as it uses the pool of HN-F nodes available in the
-     *      system
+     * \note Not used for ::MOD_CMN600_MEMORY_REGION_TYPE_SYSCACHE memory
+     *      regions as it uses the pool of HN-F nodes available in the system.
      */
     unsigned int node_id;
 };
@@ -125,7 +125,7 @@ struct mod_cmn600_config {
      */
     const unsigned int *snf_table;
 
-    /*! Number of entries in the \ref snf_table */
+    /*! Number of entries in the ::mod_cmn600_config::snf_table */
     size_t snf_count;
 
     /*! Host SA count */
@@ -134,7 +134,7 @@ struct mod_cmn600_config {
     /*! Table of region memory map entries */
     const struct mod_cmn600_memory_region_map *mmap_table;
 
-    /*! Number of entries in the \ref mmap_table */
+    /*! Number of entries in the ::mod_cmn600_config::mmap_table */
     size_t mmap_count;
 
     /*! Address space of the chip */
@@ -146,8 +146,8 @@ struct mod_cmn600_config {
     /*!
      * \brief HN-F with CAL support flag
      * \details When set to true, enables HN-F with CAL support. This flag will
-     * be used only if HN-F is found to be connected to CAL (When connected to
-     * a CAL port, node id of HN-F will be a odd number).
+     *      be used only if HN-F is found to be connected to CAL (When connected
+     *      to a CAL port, node id of HN-F will be a odd number).
      */
     bool hnf_cal_mode;
 };
@@ -253,61 +253,61 @@ struct mod_cmn600_ccix_host_node_config {
  * \brief CMN600 CCIX configuration interface
  */
 struct mod_cmn600_ccix_config_api {
-   /*!
-    * \brief Get the CCIX host configuration
-    *
-    * \param[out] config CCIX host configuration
-    *
-    * \retval FWK_SUCCESS if the operation succeed.
-    * \return one of the error code otherwise.
-    */
-   int (*get_config)(struct mod_cmn600_ccix_host_node_config *config);
-   /*!
-    * \brief set the CCIX endpoint configuration
-    *
-    * \param[in] config CCIX endpoint configuration
-    *
-    * \retval FWK_SUCCESS if the operation succeed.
-    * \return one of the error code otherwise.
-    */
-   int (*set_config)(struct mod_cmn600_ccix_remote_node_config *config);
-   /*!
-    * \brief Interface to trigger the protocol credit exchange
-    *
-    * \param  link_id Link on which the protocol credit exchange
-    *                 would initiate.
-    *
-    * \retval FWK_SUCCESS if the operation succeed.
-    * \return one of the error code otherwise.
-    */
-   int (*exchange_protocol_credit)(uint8_t link_id);
-   /*!
-    * \brief Interface to configure for system coherency
-    *
-    * \param  link_id Link on which the coherency has to
-    *                 be enabled.
-    *
-    * \retval FWK_SUCCESS if the operation succeed.
-    * \return one of the error code otherwise.
-    */
-   int (*enter_system_coherency)(uint8_t link_id);
-   /*!
-    * \brief Interface to enter DVM domain
-    *
-    * \param  link_id Link on which DVM domain has to be enabled
-    *
-    * \retval FWK_SUCCESS if the operation succeed.
-    * \return one of the error code otherwise.
-    */
-   int (*enter_dvm_domain)(uint8_t link_id);
+    /*!
+     * \brief Get the CCIX host configuration
+     *
+     * \param[out] config CCIX host configuration
+     *
+     * \retval ::FWK_SUCCESS if the operation succeed.
+     * \return one of the error code otherwise.
+     */
+    int (*get_config)(struct mod_cmn600_ccix_host_node_config *config);
+    /*!
+     * \brief set the CCIX endpoint configuration
+     *
+     * \param[in] config CCIX endpoint configuration
+     *
+     * \retval ::FWK_SUCCESS if the operation succeed.
+     * \return one of the error code otherwise.
+     */
+    int (*set_config)(struct mod_cmn600_ccix_remote_node_config *config);
+    /*!
+     * \brief Interface to trigger the protocol credit exchange
+     *
+     * \param  link_id Link on which the protocol credit exchange
+     *                 would initiate.
+     *
+     * \retval ::FWK_SUCCESS if the operation succeed.
+     * \return one of the error code otherwise.
+     */
+    int (*exchange_protocol_credit)(uint8_t link_id);
+    /*!
+     * \brief Interface to configure for system coherency
+     *
+     * \param  link_id Link on which the coherency has to
+     *                 be enabled.
+     *
+     * \retval ::FWK_SUCCESS if the operation succeed.
+     * \return one of the error code otherwise.
+     */
+    int (*enter_system_coherency)(uint8_t link_id);
+    /*!
+     * \brief Interface to enter DVM domain
+     *
+     * \param  link_id Link on which DVM domain has to be enabled
+     *
+     * \retval ::FWK_SUCCESS if the operation succeed.
+     * \return one of the error code otherwise.
+     */
+    int (*enter_dvm_domain)(uint8_t link_id);
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_CMN600_H */

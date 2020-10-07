@@ -8,21 +8,24 @@
  *      N1SDP Timer Synchronization Driver.
  */
 
-#include <stddef.h>
-#include <stdint.h>
+#include "n1sdp_scp_mmap.h"
+
+#include <internal/timer_sync.h>
+
+#include <mod_n1sdp_system.h>
+#include <mod_n1sdp_timer_sync.h>
+#include <mod_timer.h>
+
 #include <fwk_assert.h>
-#include <fwk_id.h>
 #include <fwk_interrupt.h>
+#include <fwk_log.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
 #include <fwk_status.h>
-#include <internal/timer_sync.h>
-#include <mod_log.h>
-#include <mod_n1sdp_system.h>
-#include <mod_n1sdp_timer_sync.h>
-#include <mod_timer.h>
-#include <n1sdp_scp_pik.h>
+
+#include <stdbool.h>
+#include <stddef.h>
 
 #define COUNTER_DELTA_MAX      0x100
 #define INT_STATUS_TIMEOUT     UINT32_C(1000)
@@ -54,9 +57,6 @@ struct tsync_device_ctx {
 struct timer_sync_ctx {
     /* Table of device contexts */
     struct tsync_device_ctx *device_ctx_table;
-
-    /* Log module API */
-    struct mod_log_api *log_api;
 
     /* Windowed AP memory access API */
     struct mod_n1sdp_system_ap_memory_access_api *ap_mem_api;
@@ -135,13 +135,13 @@ static int n1sdp_sync_master_timer(fwk_id_t id)
                                    SYNC_CHECK_INTERVAL_US);
         retries--;
         if ((retries % 10) == 0)
-            tsync_ctx.log_api->log(MOD_LOG_GROUP_INFO, ".");
+            FWK_LOG_INFO("[N1SDP_TIMER_SYNC] Retries: %u", retries);
     } while (retries != 0);
 
     if ((retries == 0) && (!is_timer_synced(device_ctx)))
-        tsync_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Timeout!\n");
+        FWK_LOG_INFO("[N1SDP_TIMER_SYNC] Timeout!");
     else
-        tsync_ctx.log_api->log(MOD_LOG_GROUP_INFO, "Synced\n");
+        FWK_LOG_INFO("[N1SDP_TIMER_SYNC] Synced");
 
     return FWK_SUCCESS;
 }
@@ -218,11 +218,6 @@ static int n1sdp_timer_sync_bind(fwk_id_t id, unsigned int round)
     int status;
 
     if ((round == 0) && fwk_id_is_type(id, FWK_ID_TYPE_MODULE)) {
-        status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_LOG),
-            FWK_ID_API(FWK_MODULE_IDX_LOG, 0), &tsync_ctx.log_api);
-        if (status != FWK_SUCCESS)
-            return status;
-
         status = fwk_module_bind(FWK_ID_MODULE(FWK_MODULE_IDX_N1SDP_SYSTEM),
             FWK_ID_API(FWK_MODULE_IDX_N1SDP_SYSTEM,
                        MOD_N1SDP_SYSTEM_API_IDX_AP_MEMORY_ACCESS),

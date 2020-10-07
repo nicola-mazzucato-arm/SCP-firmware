@@ -5,9 +5,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <setjmp.h>
-#include <stdbool.h>
-#include <stdlib.h>
+#include <internal/fwk_module.h>
+#include <internal/fwk_single_thread.h>
+#include <internal/fwk_thread.h>
+
 #include <fwk_assert.h>
 #include <fwk_id.h>
 #include <fwk_list.h>
@@ -15,9 +16,10 @@
 #include <fwk_slist.h>
 #include <fwk_status.h>
 #include <fwk_test.h>
-#include <internal/fwk_module.h>
-#include <internal/fwk_single_thread.h>
-#include <internal/fwk_thread.h>
+
+#include <setjmp.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
 static jmp_buf test_context;
 static struct __fwk_thread_ctx *ctx;
@@ -37,7 +39,7 @@ void *__wrap_fwk_mm_calloc(size_t num, size_t size)
 
 static struct fwk_module fake_module_desc;
 static struct fwk_module_ctx fake_module_ctx;
-struct fwk_module_ctx *__wrap___fwk_module_get_ctx(fwk_id_t id)
+struct fwk_module_ctx *__wrap_fwk_module_get_ctx(fwk_id_t id)
 {
     return &fake_module_ctx;
 }
@@ -73,7 +75,7 @@ bool __wrap_fwk_module_is_valid_notification_id(fwk_id_t id)
     return is_valid_notification_id_return_val;
 }
 
-struct fwk_element_ctx *__wrap___fwk_module_get_element_ctx(fwk_id_t id)
+struct fwk_element_ctx *__wrap_fwk_module_get_element_ctx(fwk_id_t id)
 {
     (void)id;
     return &fake_element_ctx;

@@ -8,11 +8,14 @@
 #ifndef MOD_SYSTEM_INFO_H
 #define MOD_SYSTEM_INFO_H
 
+#include <fwk_id.h>
+
+#include <stdbool.h>
 #include <stdint.h>
 
 /*!
  * \addtogroup GroupModules Modules
- * @{
+ * \{
  */
 
 /*!
@@ -25,7 +28,7 @@
  *      driver module to obtain a pointer to the system information data. Module
  *      which requires system information data then can use the api provided
  *      by this module to get the generic system information.
- *      @{
+ *      \{
  */
 
 /*!
@@ -98,8 +101,8 @@ struct mod_system_info_get_info_api {
      *
      * \param[out] sys_info Pointer to the system information data.
      *
-     * \retval FWK_SUCCESS if the sys_info pointer has been successfully set.
-     * \retval FWK_E_SUPPORT if the system information is not supported by the
+     * \retval ::FWK_SUCCESS if the sys_info pointer has been successfully set.
+     * \retval ::FWK_E_SUPPORT if the system information is not supported by the
      *      product.
      */
     int (*get_system_info)(const struct mod_system_info **sys_info);
@@ -114,11 +117,11 @@ enum mod_system_info_api_idx {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_SYSTEM_INFO_H */

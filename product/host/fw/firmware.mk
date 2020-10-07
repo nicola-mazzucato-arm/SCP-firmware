@@ -9,10 +9,11 @@
 #
 
 BS_FIRMWARE_CPU := host
-BS_FIRMWARE_HAS_MULTITHREADING := yes
+BS_FIRMWARE_HAS_MULTITHREADING := no
 BS_FIRMWARE_HAS_NOTIFICATION := yes
-BS_FIRMWARE_SOURCES := config_log.c
-BS_FIRMWARE_MODULES := log \
-                       host_console
+
+BS_FIRMWARE_MODULES := stdio
+
+BS_FIRMWARE_SOURCES := config_stdio.c
 
 include $(BS_DIR)/firmware.mk

@@ -5,16 +5,23 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <fwk_assert.h>
-#include <fwk_element.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
+#include "config_juno_xrp7724.h"
+#include "config_mock_psu.h"
+#include "config_psu.h"
+#include "juno_id.h"
+
 #include <mod_juno_xrp7724.h>
 #include <mod_mock_psu.h>
 #include <mod_psu.h>
-#include <config_juno_xrp7724.h>
-#include <config_psu.h>
-#include <juno_id.h>
+
+#include <fwk_assert.h>
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+#include <fwk_status.h>
+
+#include <stddef.h>
 
 static struct fwk_element psu_dev_desc_table[] = {
     [MOD_PSU_ELEMENT_IDX_VSYS] = {
@@ -58,43 +65,43 @@ static struct fwk_element psu_dev_desc_table[] = {
 
 /* When running on a model, use the mock_psu */
 static struct fwk_element psu_element_table_fvp[] = {
-    [0] = {
+    [MOD_PSU_ELEMENT_IDX_VSYS] = {
         .name = "Fake-VSYS",
         .data = &(const struct mod_psu_element_cfg) {
             .driver_id = FWK_ID_ELEMENT_INIT(
-                FWK_MODULE_IDX_MOCK_PSU, 0),
+                FWK_MODULE_IDX_MOCK_PSU, MOD_MOCK_PSU_ELEMENT_IDX_VSYS),
             .driver_api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_MOCK_PSU, MOD_MOCK_PSU_API_IDX_DRIVER),
         },
     },
-    [1] = {
+    [MOD_PSU_ELEMENT_IDX_VBIG] = {
         .name = "Fake-VBIG",
         .data = &(const struct mod_psu_element_cfg) {
             .driver_id = FWK_ID_ELEMENT_INIT(
-                FWK_MODULE_IDX_MOCK_PSU, 0),
+                FWK_MODULE_IDX_MOCK_PSU, MOD_MOCK_PSU_ELEMENT_IDX_VBIG),
             .driver_api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_MOCK_PSU, MOD_MOCK_PSU_API_IDX_DRIVER),
         },
     },
-    [2] = {
+    [MOD_PSU_ELEMENT_IDX_VLITTLE] = {
         .name = "Fake-VLITTLE",
         .data = &(const struct mod_psu_element_cfg) {
             .driver_id = FWK_ID_ELEMENT_INIT(
-                FWK_MODULE_IDX_MOCK_PSU, 0),
+                FWK_MODULE_IDX_MOCK_PSU, MOD_MOCK_PSU_ELEMENT_IDX_VLITTLE),
             .driver_api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_MOCK_PSU, MOD_MOCK_PSU_API_IDX_DRIVER),
         },
     },
-    [3] = {
+    [MOD_PSU_ELEMENT_IDX_VGPU] = {
         .name = "Fake-VGPU",
         .data = &(const struct mod_psu_element_cfg) {
             .driver_id = FWK_ID_ELEMENT_INIT(
-                FWK_MODULE_IDX_MOCK_PSU, 0),
+                FWK_MODULE_IDX_MOCK_PSU, MOD_MOCK_PSU_ELEMENT_IDX_VGPU),
             .driver_api_id = FWK_ID_API_INIT(
                 FWK_MODULE_IDX_MOCK_PSU, MOD_MOCK_PSU_API_IDX_DRIVER),
         },
     },
-    [4] = { 0 } /* Termination description */
+    [MOD_PSU_ELEMENT_IDX_COUNT] = { 0 } /* Termination description */
 };
 
 static const struct fwk_element *psu_get_dev_desc_table(fwk_id_t module_id)
@@ -113,5 +120,5 @@ static const struct fwk_element *psu_get_dev_desc_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_psu = {
-    .get_element_table = psu_get_dev_desc_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(psu_get_dev_desc_table),
 };

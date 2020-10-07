@@ -11,14 +11,18 @@
 #ifndef MOD_SCMI_AGENT_H
 #define MOD_SCMI_AGENT_H
 
+#include <fwk_id.h>
+
+#include <stdint.h>
+
 /*!
  * \addtogroup GroupN1SDPModule N1SDP Product Modules
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupN1SDPScmiAgent SCMI Agent Support
- * @{
+ * \{
  */
 
 /*!
@@ -73,9 +77,9 @@ struct mod_scmi_agent_api {
      * \param agent_id Agent identifier
      * \param[out] version Protocol version.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard error codes for implementation-defined
-     * errors.
+     *      errors.
      */
     int (*get_protocol_version)(fwk_id_t agent_id, uint32_t *version);
 
@@ -85,9 +89,9 @@ struct mod_scmi_agent_api {
      * \param agent_id Agent identifier
      * \param[out] clock_status SCP clock status.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard error codes for implementation-defined
-     * errors.
+     *      errors.
      */
     int (*get_clock_status)(fwk_id_t agent_id, uint32_t *clock_status);
 
@@ -98,9 +102,9 @@ struct mod_scmi_agent_api {
      * \param[out] multichip_mode Multi-chip mode value.
      * \param[out] chipid Chip ID value.
      *
-     * \retval FWK_SUCCESS The operation succeeded.
+     * \retval ::FWK_SUCCESS The operation succeeded.
      * \return One of the standard error codes for implementation-defined
-     * errors.
+     *      errors.
      */
     int (*get_chipid_info)(fwk_id_t agent_id, uint8_t *multichip_mode,
                            uint8_t *chipid);
@@ -117,11 +121,11 @@ enum mod_scmi_agent_api_idx {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_SCMI_AGENT_H */

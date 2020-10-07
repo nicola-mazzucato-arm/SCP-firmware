@@ -12,7 +12,7 @@
 
 /*!
  * \addtogroup GroupSYNQUACERModule SYNQUACER Product Modules
- * @{
+ * \{
  */
 
 /*!
@@ -22,7 +22,7 @@
  *
  * \details This module implements a SynQuacer system driver
  *
- * @{
+ * \{
  */
 
 /*!
@@ -59,9 +59,6 @@ enum mod_synquacer_system_api_idx {
  * \brief Module Context
  */
 struct synquacer_system_ctx {
-    /*! pointer to the log module. */
-    const struct mod_log_api *log_api;
-
     /*! pointer to the power domain module. */
     const struct mod_pd_restricted_api *mod_pd_restricted_api;
 
@@ -81,11 +78,11 @@ struct synquacer_system_ctx {
 extern struct synquacer_system_ctx synquacer_system_ctx;
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_SYNQUACER_SYSTEM_H */

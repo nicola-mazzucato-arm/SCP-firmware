@@ -5,12 +5,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config_clock.h"
+#include "scp_system_mmap.h"
+
+#include <mod_dmc620.h>
+
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_dmc620.h>
-#include <scp_system_mmap.h>
-#include <config_clock.h>
 
 #define COL_BITS 2
 #define BANK_BITS 4
@@ -206,11 +209,13 @@ static void direct_ddr_cmd(struct mod_dmc620_reg *dmc)
 
 /* Configuration of the DMC500 module. */
 const struct fwk_module_config config_dmc620 = {
-    .get_element_table = dmc620_get_element_table,
-    .data = &((struct mod_dmc620_module_config) {
+    .data =
+        &(struct mod_dmc620_module_config){
             .dmc_val = &dmc_val,
             .ddr_module_id = FWK_ID_MODULE_INIT(FWK_MODULE_IDX_DDR_PHY500),
             .ddr_api_id = FWK_ID_API_INIT(FWK_MODULE_IDX_DDR_PHY500, 0),
             .direct_ddr_cmd = direct_ddr_cmd,
-        }),
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(dmc620_get_element_table),
 };

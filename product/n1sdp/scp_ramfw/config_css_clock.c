@@ -5,16 +5,19 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "config_clock.h"
+
+#include <mod_css_clock.h>
+#include <mod_n1sdp_pll.h>
+#include <mod_pik_clock.h>
+
 #include <fwk_element.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_css_clock.h>
-#include <mod_n1sdp_pll.h>
-#include <mod_pik_clock.h>
-#include <n1sdp_scp_pik.h>
-#include <config_clock.h>
+
+#include <stdbool.h>
 
 static const struct mod_css_clock_rate rate_table_cpu_group_0[] = {
     {
@@ -181,5 +184,5 @@ static const struct fwk_element *css_clock_get_element_table
 }
 
 const struct fwk_module_config config_css_clock = {
-    .get_element_table = css_clock_get_element_table,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(css_clock_get_element_table),
 };

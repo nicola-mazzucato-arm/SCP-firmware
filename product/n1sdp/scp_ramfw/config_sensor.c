@@ -5,13 +5,16 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stddef.h>
-#include <fwk_element.h>
-#include <fwk_module.h>
-#include <fwk_module_idx.h>
 #include <mod_n1sdp_sensor.h>
 #include <mod_sensor.h>
 #include <mod_timer.h>
+
+#include <fwk_element.h>
+#include <fwk_id.h>
+#include <fwk_module.h>
+#include <fwk_module_idx.h>
+
+#include <stddef.h>
 
 /*
  * N1SDP sensor driver config
@@ -95,14 +98,16 @@ static const struct fwk_element *get_n1sdp_sensor_element_table(fwk_id_t id)
 }
 
 struct fwk_module_config config_n1sdp_sensor = {
-    .get_element_table = get_n1sdp_sensor_element_table,
-    .data = &((struct mod_n1sdp_sensor_config) {
-        .alarm_id = FWK_ID_SUB_ELEMENT_INIT(FWK_MODULE_IDX_TIMER, 0, 0),
-        .alarm_api = FWK_ID_API_INIT(FWK_MODULE_IDX_TIMER,
-                                     MOD_TIMER_API_IDX_ALARM),
-        .t_sensor_count = 3,
-        .v_sensor_count = 5,
-    }),
+    .data =
+        &(struct mod_n1sdp_sensor_config){
+            .alarm_id = FWK_ID_SUB_ELEMENT_INIT(FWK_MODULE_IDX_TIMER, 0, 0),
+            .alarm_api =
+                FWK_ID_API_INIT(FWK_MODULE_IDX_TIMER, MOD_TIMER_API_IDX_ALARM),
+            .t_sensor_count = 3,
+            .v_sensor_count = 5,
+        },
+
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_n1sdp_sensor_element_table),
 };
 
 /*
@@ -182,6 +187,5 @@ static const struct fwk_element *get_sensor_element_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_sensor = {
-    .get_element_table = get_sensor_element_table,
-    .data = NULL,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(get_sensor_element_table),
 };

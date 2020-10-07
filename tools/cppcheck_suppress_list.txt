@@ -29,3 +29,26 @@ unusedVariable:framework/test/test_fwk_list_init.c
 // Cppcheck can not properly understand fwk_expect() thus can not ascertain the
 // way we check for pointer values.
 nullPointerRedundantCheck:product/juno/*
+
+// Cppcheck seems to get confused when encountering parentheses in strings
+syntaxError:product/synquacer/module/synquacer_system/src/mmu500.c:34
+
+// Cppcheck doesn't like include directives that use macros
+preprocessorErrorDirective:framework/test/fwk_module_idx.h:14
+
+// Cppcheck does not properly parse the `FWK_HAS_INCLUDE` macro
+preprocessorErrorDirective:arch/arm/src/arch_mm.c:16
+
+// This memory has a static lifetime
+memleak:product/rddanielxlr/scp_ramfw/config_power_domain.c:156
+memleak:product/rddanielxlr/scp_ramfw/config_ppu_v1.c:87
+memleak:product/tc0/scp_ramfw/config_power_domain.c:114
+memleak:product/tc0/scp_ramfw/config_ppu_v1.c:87
+memleak:product/tc0/scp_romfw/config_ppu_v1.c:81
+
+// This memory has static lifetime
+memleak:framework/test/fwk_test.c:145
+
+// Cppcheck does not inspect these conditions deeply enough to know that the
+// dereference can only occur if the check succeeds
+nullPointerRedundantCheck:framework/src/fwk_io.c

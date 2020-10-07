@@ -5,10 +5,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <setjmp.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <internal/fwk_id.h>
+#include <internal/fwk_module.h>
+#include <internal/fwk_multi_thread.h>
+
 #include <fwk_assert.h>
 #include <fwk_element.h>
 #include <fwk_event.h>
@@ -16,9 +16,11 @@
 #include <fwk_macros.h>
 #include <fwk_status.h>
 #include <fwk_test.h>
-#include <internal/fwk_id.h>
-#include <internal/fwk_module.h>
-#include <internal/fwk_multi_thread.h>
+
+#include <setjmp.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #define ELEM_THREAD_ID      10
 #define MODULE_THREAD_ID    11
@@ -64,6 +66,11 @@ osStatus_t __wrap_osKernelInitialize(void)
  */
 uint32_t __wrap_osThreadFlagsWait(uint32_t flags, uint32_t options,
                                   uint32_t timeout)
+{
+    return 0;
+}
+
+uint32_t __wrap_osThreadFlagsClear(uint32_t flags)
 {
     return 0;
 }
@@ -132,19 +139,19 @@ bool __wrap_fwk_module_is_valid_notification_id(fwk_id_t id)
     return true;
 }
 
-struct fwk_element_ctx *__wrap___fwk_module_get_element_ctx(fwk_id_t id)
+struct fwk_element_ctx *__wrap_fwk_module_get_element_ctx(fwk_id_t id)
 {
     (void) id;
     return &fake_element_ctx;
 }
 
-struct fwk_module_ctx *__wrap___fwk_module_get_ctx(fwk_id_t id)
+struct fwk_module_ctx *__wrap_fwk_module_get_ctx(fwk_id_t id)
 {
     (void) id;
     return &fake_module_ctx;
 }
 
-int __wrap___fwk_module_get_state(fwk_id_t id, enum fwk_module_state *state)
+int __wrap_fwk_module_get_state(fwk_id_t id, enum fwk_module_state *state)
 {
     (void) id;
     *state = FWK_MODULE_STATE_INITIALIZED;

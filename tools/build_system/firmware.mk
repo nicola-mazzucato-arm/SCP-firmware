@@ -93,9 +93,9 @@ goal: $(TARGET_BIN)
 
 ifneq ($(BS_ARCH_CPU),host)
     ifeq ($(BS_LINKER),ARM)
-        SCATTER_SRC = $(ARCH_DIR)/src/$(BS_ARCH_ARCH)/scatter.S
+        SCATTER_SRC = $(ARCH_DIR)/$(BS_ARCH_VENDOR)/$(BS_ARCH_ARCH)/src/arch.scatter.S
     else
-        SCATTER_SRC = $(ARCH_DIR)/src/$(BS_ARCH_ARCH)/ld.S
+        SCATTER_SRC = $(ARCH_DIR)/$(BS_ARCH_VENDOR)/$(BS_ARCH_ARCH)/src/arch.ld.S
     endif
 
     SCATTER_PP = $(OBJ_DIR)/ld_preproc.s
@@ -180,14 +180,6 @@ ifeq ($(BS_FIRMWARE_HAS_MULTITHREADING),yes)
     BUILD_SUFFIX := $(MULTHREADING_SUFFIX)
     BUILD_HAS_MULTITHREADING := yes
 
-    ifneq ($(BS_ARCH_ARCH),host)
-        ifeq ($(BS_COMPILER),ARM)
-            LIBS_y += $(OS_DIR)/RTX/Library/ARM/RTX_CM3.lib
-        else
-            LIBS_y += $(OS_DIR)/RTX/Library/GCC/libRTX_CM3.a
-        endif
-    endif
-
     INCLUDES += $(OS_DIR)/RTX/Source
     INCLUDES += $(OS_DIR)/RTX/Include
     INCLUDES += $(OS_DIR)/../Core/Include
@@ -204,11 +196,34 @@ else
 endif
 export BUILD_HAS_NOTIFICATION
 
-ifeq ($(BUILD_HAS_NOTIFICATION),yes)
-    ifdef BS_FIRMWARE_NOTIFICATION_COUNT
-        BUILD_NOTIFICATION_COUNT=$(BS_FIRMWARE_NOTIFICATION_COUNT)
-    endif
-    export BUILD_NOTIFICATION_COUNT
+ifeq ($(BS_FIRMWARE_HAS_FAST_CHANNELS),yes)
+    BUILD_HAS_FAST_CHANNELS := yes
+else
+    BUILD_HAS_FAST_CHANNELS := no
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_RESOURCE_PERMISSIONS),yes)
+    BUILD_HAS_RESOURCE_PERMISSIONS := yes
+else
+    BUILD_HAS_RESOURCE_PERMISSIONS := no
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_SCMI_NOTIFICATIONS),yes)
+    BUILD_HAS_SCMI_NOTIFICATIONS := yes
+else
+    BUILD_HAS_SCMI_NOTIFICATIONS := no
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_SCMI_RESET),yes)
+    BUILD_HAS_SCMI_RESET := yes
+else
+    BUILD_HAS_SCMI_RESET := no
+endif
+
+ifeq ($(BS_FIRMWARE_HAS_STATISTICS),yes)
+    BUILD_HAS_STATISTICS := yes
+else
+    BUILD_HAS_STATISTICS := no
 endif
 
 # Add directories to the list of targets to build
@@ -259,6 +274,21 @@ LIB_TARGETS_y += $(FWK_DIR)/src
 LIBS_y += $(call lib_path,arch$(BUILD_SUFFIX))
 LIBS_y += $(call lib_path,framework$(BUILD_SUFFIX))
 
+# Add the CLI Debugger library
+INCLUDES += $(DBG_DIR)/include
+ifeq ($(BUILD_HAS_DEBUGGER),yes)
+    LIB_TARGETS_y += $(DBG_DIR)/src
+    LIBS_y += $(call lib_path,debugger$(BUILD_SUFFIX))
+endif
+
+#
+# Additional library dependencies
+#
+
+include $(ARCH_DIR)/$(BS_ARCH_VENDOR)/vendor.mk
+
+LIBS_y += $(BS_LIB_DEPS)
+
 SOURCES += $(BUILD_FIRMWARE_DIR)/fwk_module_list.c
 $(BUILD_FIRMWARE_DIR)/fwk_module_list.c: gen_module
 EXTRA_DEP := gen_module
@@ -299,7 +329,7 @@ $(TARGET_ELF): $(LIB_TARGETS_y) $(SCATTER_PP) $(OBJECTS) | $$(@D)/
 
 $(SCATTER_PP): $(SCATTER_SRC) | $$(@D)/
 	$(call show-action,GEN,$@)
-	$(CC) $(CFLAGS) -E -P -C $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) $< -o $@
 
 $(TARGET_BIN): $(TARGET_ELF) | $$(@D)/
 	$(call show-action,BIN,$@)

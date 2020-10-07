@@ -5,27 +5,49 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdbool.h>
+#include "config_clock.h"
+#include "n1sdp_pik_scp.h"
+#include "n1sdp_scp_pik.h"
+#include "n1sdp_scp_software_mmap.h"
+#include "n1sdp_sds.h"
+
+#include <mod_sds.h>
+
 #include <fwk_assert.h>
 #include <fwk_element.h>
+#include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_module.h>
 #include <fwk_module_idx.h>
-#include <mod_sds.h>
-#include <n1sdp_sds.h>
-#include <n1sdp_scp_mmap.h>
-#include <n1sdp_scp_pik.h>
-#include <n1sdp_scp_software_mmap.h>
-#include <config_clock.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 
 static const uint32_t version_packed = FWK_BUILD_VERSION;
 static const uint32_t feature_flags = 0x00000000;
 
-const struct mod_sds_config sds_module_config = {
-    .region_base_address = SCP_SDS_MEM_BASE,
-    .region_size = SCP_SDS_MEM_SIZE,
+static const struct mod_sds_region_desc sds_module_regions[] = {
+    [N1SDP_SDS_REGION_SECURE] = {
+        .base = (void*)SCP_SDS_SECURE_BASE,
+        .size = SCP_SDS_SECURE_SIZE,
+    },
+#ifdef BUILD_MODE_DEBUG
+    [N1SDP_SDS_REGION_NONSECURE] = {
+        .base = (void *)SCP_SDS_NONSECURE_BASE,
+        .size = SCP_SDS_NONSECURE_SIZE,
+    },
+#endif
+};
+
+static_assert(FWK_ARRAY_SIZE(sds_module_regions) == N1SDP_SDS_REGION_COUNT,
+              "Mismatch between number of SDS regions and number of regions "
+              "provided by the SDS configuration.");
+
+static const struct mod_sds_config sds_module_config = {
+    .regions = sds_module_regions,
+    .region_count = N1SDP_SDS_REGION_COUNT,
     .clock_id = FWK_ID_ELEMENT_INIT(FWK_MODULE_IDX_CLOCK,
-        CLOCK_IDX_INTERCONNECT)
+                                    CLOCK_IDX_INTERCONNECT)
 };
 
 static struct fwk_element sds_element_table[] = {
@@ -34,6 +56,7 @@ static struct fwk_element sds_element_table[] = {
         .data = &((struct mod_sds_structure_desc) {
             .id = N1SDP_SDS_CPU_INFO,
             .size = N1SDP_SDS_CPU_INFO_SIZE,
+            .region_id = N1SDP_SDS_REGION_SECURE,
             .finalize = true,
         }),
     },
@@ -42,6 +65,7 @@ static struct fwk_element sds_element_table[] = {
         .data = &((struct mod_sds_structure_desc) {
             .id = N1SDP_SDS_FIRMWARE_VERSION,
             .size = N1SDP_SDS_FIRMWARE_VERSION_SIZE,
+            .region_id = N1SDP_SDS_REGION_SECURE,
             .payload = &version_packed,
             .finalize = true,
         }),
@@ -51,6 +75,7 @@ static struct fwk_element sds_element_table[] = {
         .data = &((struct mod_sds_structure_desc) {
             .id = N1SDP_SDS_RESET_SYNDROME,
             .size = N1SDP_SDS_RESET_SYNDROME_SIZE,
+            .region_id = N1SDP_SDS_REGION_SECURE,
             .payload = (void *)(&PIK_SCP->RESET_SYNDROME),
             .finalize = true,
         }),
@@ -60,6 +85,7 @@ static struct fwk_element sds_element_table[] = {
         .data = &((struct mod_sds_structure_desc) {
             .id = N1SDP_SDS_FEATURE_AVAILABILITY,
             .size = N1SDP_SDS_FEATURE_AVAILABILITY_SIZE,
+            .region_id = N1SDP_SDS_REGION_SECURE,
             .payload = &feature_flags,
             .finalize = true,
         }),
@@ -69,6 +95,7 @@ static struct fwk_element sds_element_table[] = {
         .data = &((struct mod_sds_structure_desc) {
             .id = N1SDP_SDS_PLATFORM_INFO,
             .size = N1SDP_SDS_PLATFORM_INFO_SIZE,
+            .region_id = N1SDP_SDS_REGION_SECURE,
             .finalize = true,
         }),
     },
@@ -77,15 +104,17 @@ static struct fwk_element sds_element_table[] = {
         .data = &((struct mod_sds_structure_desc) {
             .id = N1SDP_SDS_BL33_INFO,
             .size = N1SDP_SDS_BL33_INFO_SIZE,
+            .region_id = N1SDP_SDS_REGION_SECURE,
             .finalize = true,
         }),
     },
-#ifdef BUILD_HAS_MOD_TEST
+#ifdef BUILD_MODE_DEBUG
     {
         .name = "Boot Counters",
         .data = &((struct mod_sds_structure_desc) {
             .id = N1SDP_SDS_CPU_BOOTCTR,
             .size = N1SDP_SDS_CPU_BOOTCTR_SIZE,
+            .region_id = N1SDP_SDS_REGION_NONSECURE,
             .finalize = true,
         }),
     },
@@ -94,12 +123,27 @@ static struct fwk_element sds_element_table[] = {
         .data = &((struct mod_sds_structure_desc) {
             .id = N1SDP_SDS_CPU_FLAGS,
             .size = N1SDP_SDS_CPU_FLAGS_SIZE,
+            .region_id = N1SDP_SDS_REGION_NONSECURE,
             .finalize = true,
         }),
     },
 #endif
     { 0 }, /* Termination description. */
 };
+
+static_assert(SCP_SDS_SECURE_SIZE >
+                    N1SDP_SDS_CPU_INFO_SIZE +
+                    N1SDP_SDS_FIRMWARE_VERSION_SIZE +
+                    N1SDP_SDS_RESET_SYNDROME_SIZE +
+                    N1SDP_SDS_FEATURE_AVAILABILITY_SIZE,
+            "SDS structures too large for SDS S-RAM.\n");
+
+#ifdef BUILD_MODE_DEBUG
+    static_assert(SCP_SDS_NONSECURE_SIZE >
+                        N1SDP_SDS_CPU_BOOTCTR_SIZE +
+                        N1SDP_SDS_CPU_FLAGS_SIZE,
+                "SDS structures too large for SDS NS-RAM.\n");
+#endif
 
 static const struct fwk_element *sds_get_element_table(fwk_id_t module_id)
 {
@@ -111,6 +155,6 @@ static const struct fwk_element *sds_get_element_table(fwk_id_t module_id)
 }
 
 struct fwk_module_config config_sds = {
-    .get_element_table = sds_get_element_table,
     .data = &sds_module_config,
+    .elements = FWK_MODULE_DYNAMIC_ELEMENTS(sds_get_element_table),
 };

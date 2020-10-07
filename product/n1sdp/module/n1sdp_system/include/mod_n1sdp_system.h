@@ -11,14 +11,16 @@
 #ifndef MOD_N1SDP_SYSTEM_H
 #define MOD_N1SDP_SYSTEM_H
 
+#include <stdint.h>
+
 /*!
  * \addtogroup GroupN1SDPModule N1SDP Product Modules
- * @{
+ * \{
  */
 
 /*!
  * \defgroup GroupN1SDPSystem N1SDP System Support
- * @{
+ * \{
  */
 
 /*!
@@ -39,7 +41,7 @@
 #define AP_SCP_SRAM_OFFSET            UINT32_C(0xA0000000)
 
 /*! AP Cores Reset Address in SCP Address Space */
-#define AP_CORE_RESET_ADDR            UINT64_C(0xA4040000)
+#define AP_CORE_RESET_ADDR            UINT32_C(0xA4040000)
 
 /*! Address translation enable bit */
 #define ADDR_TRANS_EN                 UINT32_C(0x1)
@@ -95,11 +97,11 @@ struct mod_n1sdp_system_ap_memory_access_api {
 };
 
 /*!
- * @}
+ * \}
  */
 
 /*!
- * @}
+ * \}
  */
 
 #endif /* MOD_N1SDP_SYSTEM_H */

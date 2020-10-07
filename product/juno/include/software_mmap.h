@@ -11,7 +11,7 @@
 #ifndef SOFTWARE_MMAP_H
 #define SOFTWARE_MMAP_H
 
-#include <system_mmap.h>
+#include "system_mmap.h"
 
 /*
  * The 4KB "Context Region" at the base of Trusted SRAM is used for several
@@ -75,8 +75,8 @@
                                        SCMI_PAYLOAD_SIZE)
 
 /* SDS Memory Region */
-#define SDS_SHARED_MEM_BASE           (CONTEXT_REGION_BASE)
-#define SDS_SHARED_MEM_SIZE           (SCMI_PAYLOAD_S_BASE - \
+#define SCP_SDS_SECURE_BASE           (CONTEXT_REGION_BASE)
+#define SCP_SDS_SECURE_SIZE           (SCMI_PAYLOAD_S_BASE - \
                                        CONTEXT_REGION_BASE)
 
 /* SCMI Payload Areas */
@@ -87,5 +87,15 @@
                                        SCMI_PAYLOAD_SIZE)
 #define SCMI_PAYLOAD_HIGH_P2A_BASE    (SCMI_PAYLOAD_HIGH_A2P_BASE + \
                                        SCMI_PAYLOAD_SIZE)
+
+/* SCMIv2 Fast Channels */
+#define SCMI_FAST_CHANNEL_BASE        (SCMI_PAYLOAD_HIGH_P2A_BASE + \
+                                       SCMI_PAYLOAD_SIZE)
+#define SCMI_FAST_CHANNEL_SIZE        (SCMI_PAYLOAD_SIZE)
+
+/* SCMIv2 Performance statistics region */
+#define SCMI_PERF_STATS_BASE          (SCMI_FAST_CHANNEL_BASE + \
+                                       SCMI_PAYLOAD_SIZE)
+#define SCMI_PERF_STATS_SIZE          (0x1000)
 
 #endif /* SOFTWARE_MMAP_H */

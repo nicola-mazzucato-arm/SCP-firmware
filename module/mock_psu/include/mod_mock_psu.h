@@ -8,7 +8,9 @@
 #ifndef MOD_MOCK_PSU_H
 #define MOD_MOCK_PSU_H
 
+#include <fwk_id.h>
 #include <fwk_module_idx.h>
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -90,7 +92,7 @@ struct mod_mock_psu_element_cfg {
     /*!
      * \brief Default voltage, in millivolts (mV), of the device's supply.
      */
-    uint64_t default_voltage;
+    uint32_t default_voltage;
 };
 
 /*!

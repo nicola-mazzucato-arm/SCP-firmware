@@ -5,19 +5,24 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <stdint.h>
+#include <gtimer_reg.h>
+
+#include <mod_clock.h>
+#include <mod_gtimer.h>
+#include <mod_timer.h>
+
 #include <fwk_assert.h>
+#include <fwk_event.h>
 #include <fwk_id.h>
 #include <fwk_macros.h>
 #include <fwk_mm.h>
 #include <fwk_module.h>
 #include <fwk_notification.h>
 #include <fwk_status.h>
-#include <gtimer_reg.h>
-#include <mod_clock.h>
-#include <mod_gtimer.h>
-#include <mod_power_domain.h>
-#include <mod_timer.h>
+#include <fwk_time.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 #define GTIMER_FREQUENCY_MIN_HZ  UINT32_C(1)
 #define GTIMER_FREQUENCY_MAX_HZ  UINT32_C(1000000000)
@@ -31,8 +36,31 @@ struct dev_ctx {
     const struct mod_gtimer_dev_config *config;
 };
 
-/* Table of device context structures */
-static struct dev_ctx *ctx_table;
+static struct mod_gtimer_ctx {
+    bool initialized; /* Whether the device context has been initialized */
+
+    struct dev_ctx *table; /* Device context table */
+} mod_gtimer_ctx;
+
+static uint64_t mod_gtimer_get_counter(const struct cntbase_reg *hw_timer)
+{
+    uint32_t counter_low;
+    uint32_t counter_high;
+
+    /*
+     * To avoid race conditions where the high half of the counter increments
+     * after it has been sampled but before the low half is sampled, the values
+     * are resampled until the high half has stabilized. This assumes that the
+     * loop is faster than the high half incrementation.
+     */
+
+    do {
+        counter_high = hw_timer->PCTH;
+        counter_low = hw_timer->PCTL;
+    } while (counter_high != hw_timer->PCTH);
+
+    return ((uint64_t)counter_high << 32) | counter_low;
+}
 
 /*
  * Functions fulfilling the Timer module's driver interface
@@ -42,7 +70,7 @@ static int enable(fwk_id_t dev_id)
 {
     struct dev_ctx *ctx;
 
-    ctx = ctx_table + fwk_id_get_element_idx(dev_id);
+    ctx = mod_gtimer_ctx.table + fwk_id_get_element_idx(dev_id);
 
     ctx->hw_timer->P_CTL &= ~CNTBASE_P_CTL_IMASK;
     ctx->hw_timer->P_CTL |=  CNTBASE_P_CTL_ENABLE;
@@ -54,7 +82,7 @@ static int disable(fwk_id_t dev_id)
 {
     struct dev_ctx *ctx;
 
-    ctx = ctx_table + fwk_id_get_element_idx(dev_id);
+    ctx = mod_gtimer_ctx.table + fwk_id_get_element_idx(dev_id);
 
     ctx->hw_timer->P_CTL |=  CNTBASE_P_CTL_IMASK;
     ctx->hw_timer->P_CTL &= ~CNTBASE_P_CTL_ENABLE;
@@ -65,23 +93,10 @@ static int disable(fwk_id_t dev_id)
 static int get_counter(fwk_id_t dev_id, uint64_t *value)
 {
     const struct dev_ctx *ctx;
-    uint32_t counter_low;
-    uint32_t counter_high;
 
-    ctx = ctx_table + fwk_id_get_element_idx(dev_id);
+    ctx = mod_gtimer_ctx.table + fwk_id_get_element_idx(dev_id);
 
-    /*
-     * To avoid race conditions where the high half of the counter increments
-     * after it has been sampled but before the low half is sampled, the values
-     * are resampled until the high half has stabilized. This assumes that the
-     * loop is faster than the high half incrementation.
-     */
-    do {
-        counter_high = ctx->hw_timer->PCTH;
-        counter_low = ctx->hw_timer->PCTL;
-    } while (counter_high != ctx->hw_timer->PCTH);
-
-    *value = ((uint64_t)counter_high << 32) | counter_low;
+    *value = mod_gtimer_get_counter(ctx->hw_timer);
 
     return FWK_SUCCESS;
 }
@@ -107,7 +122,7 @@ static int set_timer(fwk_id_t dev_id, uint64_t timestamp)
      */
     timestamp = FWK_MAX(counter + GTIMER_MIN_TIMESTAMP, timestamp);
 
-    ctx = ctx_table + fwk_id_get_element_idx(dev_id);
+    ctx = mod_gtimer_ctx.table + fwk_id_get_element_idx(dev_id);
 
     ctx->hw_timer->P_CVALL = timestamp & 0xFFFFFFFF;
     ctx->hw_timer->P_CVALH = timestamp >> 32;
@@ -121,7 +136,7 @@ static int get_timer(fwk_id_t dev_id, uint64_t *timestamp)
     uint32_t counter_low;
     uint32_t counter_high;
 
-    ctx = ctx_table + fwk_id_get_element_idx(dev_id);
+    ctx = mod_gtimer_ctx.table + fwk_id_get_element_idx(dev_id);
 
     /* Read 64-bit timer value */
     counter_low = ctx->hw_timer->P_CVALL;
@@ -139,7 +154,7 @@ static int get_frequency(fwk_id_t dev_id, uint32_t *frequency)
     if (frequency == NULL)
         return FWK_E_PARAM;
 
-    ctx = ctx_table + fwk_id_get_element_idx(dev_id);
+    ctx = mod_gtimer_ctx.table + fwk_id_get_element_idx(dev_id);
 
     *frequency = ctx->config->frequency;
 
@@ -164,7 +179,7 @@ static int gtimer_init(fwk_id_t module_id,
                        unsigned int element_count,
                        const void *data)
 {
-    ctx_table = fwk_mm_alloc(element_count, sizeof(struct dev_ctx));
+    mod_gtimer_ctx.table = fwk_mm_alloc(element_count, sizeof(struct dev_ctx));
 
     return FWK_SUCCESS;
 }
@@ -174,7 +189,7 @@ static int gtimer_device_init(fwk_id_t element_id, unsigned int unused,
 {
     struct dev_ctx *ctx;
 
-    ctx = ctx_table + fwk_id_get_element_idx(element_id);
+    ctx = mod_gtimer_ctx.table + fwk_id_get_element_idx(element_id);
 
     ctx->config = data;
     if (ctx->config->hw_timer == 0   ||
@@ -231,7 +246,7 @@ static int gtimer_start(fwk_id_t id)
     if (!fwk_id_is_type(id, FWK_ID_TYPE_ELEMENT))
         return FWK_SUCCESS;
 
-    ctx = ctx_table + fwk_id_get_element_idx(id);
+    ctx = mod_gtimer_ctx.table + fwk_id_get_element_idx(id);
 
     if (!fwk_id_is_type(ctx->config->clock_id, FWK_ID_TYPE_NONE)) {
         /* Register for clock state notifications */
@@ -252,19 +267,19 @@ static int gtimer_process_notification(
     struct clock_notification_params *params;
     struct dev_ctx *ctx;
 
-    assert(fwk_id_is_equal(event->id, mod_clock_notification_id_state_changed));
-    assert(fwk_id_is_type(event->target_id, FWK_ID_TYPE_ELEMENT));
+    fwk_assert(
+        fwk_id_is_equal(event->id, mod_clock_notification_id_state_changed));
+    fwk_assert(fwk_id_is_type(event->target_id, FWK_ID_TYPE_ELEMENT));
 
     params = (struct clock_notification_params *)event->params;
 
     if (params->new_state == MOD_CLOCK_STATE_RUNNING) {
-        ctx = ctx_table + fwk_id_get_element_idx(event->target_id);
+        ctx = mod_gtimer_ctx.table + fwk_id_get_element_idx(event->target_id);
         gtimer_control_init(ctx);
     }
 
     return FWK_SUCCESS;
 }
-
 
 /*
  * Module descriptor
@@ -280,3 +295,29 @@ const struct fwk_module module_gtimer = {
     .process_bind_request = gtimer_process_bind_request,
     .process_notification = gtimer_process_notification,
 };
+
+static fwk_timestamp_t mod_gtimer_timestamp(const void *ctx)
+{
+    fwk_timestamp_t timestamp;
+
+    const struct mod_gtimer_dev_config *cfg = ctx;
+    const struct cntbase_reg *hw_timer = (const void *)cfg->hw_timer;
+
+    uint32_t frequency = cfg->frequency;
+    uint64_t counter = mod_gtimer_get_counter(hw_timer);
+
+    timestamp = (FWK_S(1) / frequency) * counter;
+
+    return timestamp;
+}
+
+struct fwk_time_driver mod_gtimer_driver(
+    const void **ctx,
+    const struct mod_gtimer_dev_config *cfg)
+{
+    *ctx = cfg;
+
+    return (struct fwk_time_driver){
+        .timestamp = mod_gtimer_timestamp,
+    };
+}
